@@ -205,8 +205,17 @@ t('shadows stack, and deeper means more layers', () => {
 t('patterns are inline data URIs with no request', () => {
   for (const p of PATTERNS) {
     const pat = pattern(p);
-    ok(pat.dataUri.startsWith('url("data:image/svg+xml,'), `${p} is not inline`);
+    ok(pat.dataUri.startsWith("url('data:image/svg+xml,"), `${p} is not inline`);
     ok(pat.bytes < 4000, `${p} is ${pat.bytes} bytes`);
+  }
+});
+t('a pattern survives being dropped into an HTML style attribute', () => {
+  // This is how everybody actually uses it, and a double-quoted url() ends the
+  // attribute early — which silently blanked every texture swatch on the site.
+  for (const p of PATTERNS) {
+    const pat = pattern(p);
+    ok(!pat.dataUri.includes('"'), `${p} has a double quote and will break style="..."`);
+    ok(!pat.css.includes('"'), `${p}.css has a double quote`);
   }
 });
 t('blobs close their path', () => ok(blob('x').d.trim().endsWith('Z')));

@@ -8,7 +8,7 @@ import { avatar, STYLES } from './lib/avatar.mjs';
 import { exportAll } from './lib/export.mjs';
 import { CASES, staticChecks } from './lib/chaos.mjs';
 import { pattern, PATTERNS } from './lib/pattern.mjs';
-import { blob, divider } from './lib/shape.mjs';
+import { blob, divider, DIVIDERS } from './lib/shape.mjs';
 import { toSeed } from './lib/seed.mjs';
 import { contrast } from './lib/color.mjs';
 
@@ -100,18 +100,23 @@ function renderTokens(sys) {
     })
     .join('');
 
+  // Patterns tile as a background; shapes are drawn objects. They need
+  // different containers, so they get them rather than sharing one that suits
+  // neither.
   $('#textures').innerHTML =
-    PATTERNS.slice(0, 4)
-      .map((p) => {
-        // The page uses these at ~4% so they whisper. In a swatch that reads
-        // as an empty box, so the preview is deliberately louder than the
-        // real thing.
-        const pat = pattern(p, { colour: sys.colour.text, opacity: 0.42, seed: sys.seed });
-        return `<div class="tex" style="background-image:${pat.dataUri}"><span>${p}</span></div>`;
-      })
-      .join('') +
-    `<div class="tex" style="color:var(--brand)">${blob(sys.seed, { size: 100 }).svg}<span>blob</span></div>` +
-    `<div class="tex" style="color:var(--brand);display:grid;place-items:center">${divider('wave', { width: 100, height: 40, seed: sys.seed }).svg}<span class="on-top">divider</span></div>`;
+    PATTERNS.map((p) => {
+      // The page uses these at ~4% so they whisper. In a 90px swatch that
+      // reads as an empty box, so the preview is louder than the real value.
+      const pat = pattern(p, { colour: sys.colour.text, opacity: 0.45, seed: sys.seed });
+      return `<div class="tex" style="background-image:${pat.dataUri}"><span>${p}</span></div>`;
+    }).join('') +
+    `<div class="tex shape">${blob(sys.seed, { size: 100 }).svg}<span>blob</span></div>` +
+    DIVIDERS.slice(0, 3)
+      .map(
+        (d) =>
+          `<div class="tex shape divider">${divider(d, { width: 100, height: 46, seed: sys.seed }).svg}<span>${d}</span></div>`
+      )
+      .join('');
 
   $('#gradbox').style.cssText = sys.gradient.css;
   $('#gradcss').textContent = sys.gradient.css;

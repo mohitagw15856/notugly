@@ -185,10 +185,25 @@ h3.sub { margin-top: 2.5rem; }
 .elevations { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); }
 .elev { aspect-ratio: 1; border-radius: var(--radius); background: var(--bg); display: grid; place-items: center; font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); border: 1px solid var(--border); }
 
-.textures { display: grid; gap: 0.8rem; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
-.tex { aspect-ratio: 1; border-radius: var(--radius); border: 1px solid var(--border); background-color: var(--bg); position: relative; overflow: hidden; }
-.tex span { position: absolute; bottom: 4px; left: 6px; font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); }
-.tex svg { width: 100%; height: 100%; color: var(--brand); }
+.textures { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+.tex {
+  aspect-ratio: 1; border-radius: var(--radius);
+  border: 1px solid var(--border); background-color: var(--bg);
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+/* The label sits under the artwork rather than on top of it — a caption over a
+   dark shape needed its own background plate, which looked like a bug. */
+.tex span {
+  margin-top: auto; padding: 3px 6px;
+  font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted);
+  background: var(--bg); border-top: 1px solid var(--border);
+  position: relative; z-index: 1;
+}
+.tex.shape { color: var(--brand); }
+.tex.shape svg { width: 100%; flex: 1; min-height: 0; display: block; }
+/* Dividers are wide and short by nature; centring them stops the squash. */
+.tex.divider svg { flex: none; margin: auto 0; height: 46px; }
 
 .gradbox { height: 150px; border-radius: var(--radius); margin-bottom: 0.8rem; border: 1px solid var(--border); }
 
