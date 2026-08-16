@@ -564,6 +564,19 @@ someone, and a user's face never changes because a server restarted.
 
 <br>
 
+## Used by
+
+The design skills in
+**[pm-claude-skills](https://github.com/mohitagw15856/pm-claude-skills)** call
+this for their contrast numbers — `accessibility-audit`, `design-system-audit`,
+`design-handoff-brief`, `brand-guidelines` and the Figma reviews. Its MCP server
+exposes `check_contrast` as a tool.
+
+That's the argument for the whole library in one line: **a skill can tell a
+model to check the contrast, but only arithmetic can actually check it.**
+
+<br>
+
 <p align="center">
   <sub>
     MIT · no dependencies · <a href="https://mohitagw15856.github.io/notugly">the fun version of this page</a>
