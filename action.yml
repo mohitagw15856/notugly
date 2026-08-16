@@ -1,12 +1,22 @@
-name: notugly
-description: Fail the build when a design regresses — contrast, grey sprawl, or a typeface nobody agreed to.
-author: Mohit (mohitagw15856)
+# The Marketplace name has to be globally unique against every action, user and
+# organisation on GitHub — and a user called "Notugly" already exists. So the
+# listing is named for what it does. The repo, the npm package and the CLI are
+# all still `notugly`.
+name: notugly design check
+description: Fail the build when a design regresses — unreadable contrast, grey sprawl, or a typeface nobody agreed to.
+author: mohitagw15856
 
 branding:
   icon: eye
   color: purple
 
 inputs:
+  notugly-version:
+    description: >-
+      The notugly version to run. Pinned to a major range by default: an action
+      that floats on `latest` breaks every user the day a major version lands.
+    required: false
+    default: '^0.3.0'
   url:
     description: The site or token file to check. A deployed preview URL works well.
     required: true
@@ -36,7 +46,7 @@ runs:
     - name: Check contrast and consistency
       shell: bash
       run: |
-        npx --yes notugly check "${{ inputs.url }}" \
+        npx --yes "notugly@${{ inputs.notugly-version }}" check "${{ inputs.url }}" \
           --max-greys "${{ inputs.max-greys }}" \
           --max-fonts "${{ inputs.max-fonts }}"
 
@@ -44,5 +54,5 @@ runs:
       if: inputs.baseline != ''
       shell: bash
       run: |
-        npx --yes notugly watch "${{ inputs.url }}" "${{ inputs.baseline }}" \
+        npx --yes "notugly@${{ inputs.notugly-version }}" watch "${{ inputs.url }}" "${{ inputs.baseline }}" \
           ${{ inputs.strict-drift == 'true' && '--strict' || '' }}
