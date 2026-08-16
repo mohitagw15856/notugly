@@ -106,10 +106,15 @@ function renderTokens(sys) {
     .map(([k, v]) => `<tr><td>${k}</td><td colspan="2">${esc(v)}</td></tr>`)
     .join('');
 
-  $('#elevations').innerHTML = ['flat', 'low', 'medium', 'high', 'floating']
+  $('#elevations').innerHTML = sys.elevationLevels
     .map((lv) => {
-      const s = sysShadow(sys, lv);
-      return `<div class="elev" style="box-shadow:${s}">${lv}</div>`;
+      const s = sys.elevation[lv];
+      const here = lv === sys.shadow.level;
+      // In dark mode the surface does the lifting, not the shadow.
+      const bg = sys.elevationSurface[lv];
+      return `<div class="elev${here ? ' here' : ''}" style="box-shadow:${s.layers.join(', ')};background:${bg}"
+        title="${s.layers.length} layer${s.layers.length === 1 ? '' : 's'} · ${bg}">
+        <b>${lv}</b><span>${s.layers.length}&times;</span></div>`;
     })
     .join('');
 
@@ -140,14 +145,14 @@ function renderTokens(sys) {
 }
 
 // Re-derive a shadow at another level without rebuilding the whole system.
-function sysShadow(sys, level) {
-  const scale = { flat: 0.25, low: 0.5, medium: 1, high: 1.8, floating: 3 }[level] || 1;
-  return sys.shadow.layers
-    .map((l) =>
-      l.replace(/(\d+(?:\.\d+)?)px (\d+(?:\.\d+)?)px/, (_, y, b) => `${(+y * scale).toFixed(1)}px ${(+b * scale).toFixed(1)}px`)
-    )
-    .join(', ');
-}
+// Elevation used to be faked here: take whichever single shadow the vibe chose
+// and multiply its pixel values. That was wrong twice over. In Editorial the
+// only shadow is one layer at 2.7% opacity, so scaling the geometry produced
+// five identical invisible boxes; and in Glassy the "flat" swatch was a
+// six-layer shadow shrunk, which is not what flat means.
+//
+// A real elevation scale varies layer count, blur *and* opacity together, and
+// lib/shadow.mjs has always generated exactly that. Use it.
 
 let motionStyle;
 function injectMotion(sys) {

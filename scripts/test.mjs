@@ -10,7 +10,7 @@ import { exportAll, toCss, toTailwind, toJson } from '../lib/export.mjs';
 import { extractFromCss, summarise } from '../lib/extract.mjs';
 import { staticChecks, CASES } from '../lib/chaos.mjs';
 import { gradient } from '../lib/gradient.mjs';
-import { shadow, LEVELS } from '../lib/shadow.mjs';
+import { shadow, allShadows, allElevationSurfaces, elevationSurface, LEVELS } from '../lib/shadow.mjs';
 import { pattern, PATTERNS } from '../lib/pattern.mjs';
 import { blob, divider, DIVIDERS } from '../lib/shape.mjs';
 import { scale, typeSystem, PAIRINGS } from '../lib/type.mjs';
@@ -765,6 +765,91 @@ t('creatures stay inside the frame', () => {
       ok(Math.max(...coords) < 130, `${s} seed ${i} drew at ${Math.max(...coords)}`);
     }
   }
+});
+
+
+
+// --- elevation --------------------------------------------------------------
+
+t('every system carries the whole elevation ladder, not just its own rung', () => {
+  for (const v of VIBE_NAMES) {
+    const sys = system('elev', { vibe: v });
+    eq(Object.keys(sys.elevation), LEVELS, v);
+    ok(sys.elevation[sys.shadow.level], `${v} sits on a level that is not in the ladder`);
+  }
+});
+
+t('elevation levels are visibly different from each other', () => {
+  // The old bug: the site faked levels by scaling one shadow's pixel values.
+  // In Editorial that single shadow is one layer at 2.7% opacity, so all five
+  // levels rendered as identical invisible boxes. Geometry alone is not enough
+  // — layer count and opacity have to move too.
+  for (const v of VIBE_NAMES) {
+    for (const dark of [false, true]) {
+      const e = system('elev', { vibe: v, dark }).elevation;
+      const counts = LEVELS.map((l) => e[l].layers.length);
+      const strings = LEVELS.map((l) => e[l].layers.join(','));
+
+      eq(new Set(strings).size, LEVELS.length, `${v}${dark ? ' dark' : ''}: two levels are identical`);
+      for (let i = 1; i < counts.length; i++) {
+        ok(counts[i] >= counts[i - 1], `${v}: ${LEVELS[i]} has fewer layers than ${LEVELS[i - 1]}`);
+      }
+    }
+  }
+});
+
+t('a higher elevation is actually darker, not merely bigger', () => {
+  const e = system('elev').elevation;
+  const ink = (level) =>
+    e[level].layers.reduce((sum, l) => sum + Number(l.match(/([\d.]+)\)$/)[1]), 0);
+  for (let i = 1; i < LEVELS.length; i++) {
+    ok(ink(LEVELS[i]) > ink(LEVELS[i - 1]),
+       `${LEVELS[i]} carries no more shadow than ${LEVELS[i - 1]} — scaling geometry only is the old bug`);
+  }
+});
+
+t('dark mode lifts the surface, because a dark shadow on a dark page is nothing', () => {
+  for (const v of VIBE_NAMES) {
+    const light = system('elev', { vibe: v });
+    const dark = system('elev', { vibe: v, dark: true });
+
+    // Light mode: shadows do the work, the surface never moves.
+    eq(new Set(Object.values(light.elevationSurface)).size, 1, `${v} light shifted its surface`);
+
+    // Dark mode: the surface has to move, or every level looks identical.
+    ok(new Set(Object.values(dark.elevationSurface)).size > 1,
+       `${v} dark has one surface for every elevation — the levels are invisible`);
+  }
+});
+
+t('a raised surface never costs you the text on it', () => {
+  // Lifting the surface for depth is only allowed while the text still clears
+  // AA. Contrast beats depth; that is the whole premise.
+  for (const v of VIBE_NAMES) {
+    const sys = system('elev', { vibe: v, dark: true });
+    for (const [level, bg] of Object.entries(sys.elevationSurface)) {
+      const ratio = contrast(sys.colour.text, bg);
+      ok(ratio >= 4.5, `${v} ${level}: text is ${ratio.toFixed(2)}:1 on the raised surface ${bg}`);
+    }
+  }
+});
+
+t('the exported CSS contains every elevation the site shows', () => {
+  // The panel used to advertise a scale the artefact did not contain.
+  const css = toCss(system('elev'));
+  for (const l of LEVELS) ok(css.includes(`--shadow-${l}:`), `--shadow-${l} is missing from the export`);
+  for (const l of LEVELS) ok(css.includes(`--surface-${l}:`), `--surface-${l} is missing from the export`);
+  ok(/--shadow: var\(--shadow-\w+\);/.test(css), '--shadow no longer aliases a real level');
+});
+
+t('the elevation scale survives every export format', () => {
+  const sys = system('elev');
+  const tokens = JSON.parse(toJson(sys));
+  for (const l of LEVELS) ok(tokens.shadow[l], `tokens.json is missing shadow.${l}`);
+
+  const tw = toTailwind(sys);
+  const config = JSON.parse(tw.slice(tw.indexOf('export default') + 14, tw.lastIndexOf(';')));
+  for (const l of LEVELS) ok(config.theme.extend.boxShadow[l], `tailwind is missing boxShadow.${l}`);
 });
 
 // ---------------------------------------------------------------------------
