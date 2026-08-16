@@ -185,6 +185,27 @@ t('avatars get a ring when they would vanish into the page', () => {
   const svg = avatar('ringtest', { on: p.bg });
   ok(svg.includes('stroke-width="3"'), 'no separating ring was added');
 });
+t('a sticker never hides its character in the plate', () => {
+  // A pale ghost on a pale sticker plate used to render as two floating dots.
+  for (let i = 0; i < 300; i++) {
+    const svg = avatar(`st${i}`, { style: 'sticker' });
+    const marks = (svg.match(/<(circle|path|ellipse|rect)\b/g) || []).length;
+    ok(marks >= 8, `sticker st${i} has only ${marks} marks`);
+  }
+});
+t('pencil people are drawn on paper, not on a saturated disc', () => {
+  const svg = avatar('mo', { style: 'pencil' });
+  const bg = svg.match(/<rect width="100" height="100" fill="(#[0-9a-f]{6})"/)[1];
+  ok(luminance(bg) > 0.75, `pencil backdrop ${bg} is too dark to read as paper`);
+});
+t('the new styles all render and stay self-contained', () => {
+  for (const style of ['pencil', 'specs', 'cat', 'ghost', 'sticker']) {
+    const svg = avatar('mo', { style });
+    ok(svg.startsWith('<svg') && svg.endsWith('</svg>'), style);
+    ok(!/<script|href=|xlink:|<image/.test(svg), `${style} has an external reference`);
+  }
+});
+
 t('initials handles one word, two words and nothing', () => {
   ok(avatar('mo', { style: 'initials', label: 'Mo Agarwal' }).includes('MA'));
   ok(avatar('x', { style: 'initials', label: 'Cher' }).includes('C'));

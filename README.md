@@ -1,39 +1,31 @@
 <p align="center">
-  <img src="assets/readme/cast.svg" alt="Eight generated avatars" width="100%">
+  <img src="assets/readme/cast.svg" alt="A row of generated avatars" width="100%">
 </p>
 
 <h1 align="center">notugly</h1>
 
+<p align="center"><b>Your design is ugly. Here, have this one instead.</b></p>
+
 <p align="center">
-  <b>Designs that are provably not ugly.</b><br>
-  Pick a vibe. Take the CSS. Nothing to install.
+  <code>npx notugly</code>
 </p>
 
 <p align="center">
-  <a href="https://mohitagw15856.github.io/notugly"><b>▶ Try it</b></a> ·
-  <a href="#avatars">Avatars</a> ·
-  <a href="#take-it">Export</a> ·
-  <a href="#why-provably">Why "provably"</a>
+  <a href="https://mohitagw15856.github.io/notugly"><b>Play with it →</b></a>
 </p>
 
-<p align="center">
-  <img alt="zero dependencies" src="https://img.shields.io/badge/dependencies-0-0f766e?style=flat-square">
-  <img alt="zero runtime" src="https://img.shields.io/badge/runtime-0%20bytes-0f766e?style=flat-square">
-  <img alt="WCAG AA" src="https://img.shields.io/badge/WCAG-AA%20guaranteed-4f46e5?style=flat-square">
-  <a href="https://www.npmjs.com/package/notugly"><img alt="npm" src="https://img.shields.io/npm/v/notugly?style=flat-square&color=c026d3"></a>
-</p>
+<br>
 
-```console
-npx notugly
-```
+## What is this
 
----
+You need colours. You pick a blue. You pick a grey that goes with the blue.
+Twenty minutes later you have eleven greys, none of them go together, and the
+button text is unreadable but you've stopped being able to tell.
 
-## Every design tool gives you things. This one gives you proof.
-
-Generate a whole design system from a seed — colour, type, spacing, shadow,
-motion, texture — and **every text pairing is checked against WCAG before you
-ever see it.** Not audited afterwards. Generated that way.
+This does that bit for you, and **it can't produce an unreadable pairing** —
+not because it checks afterwards and apologises, but because the text colour is
+worked out *from* the background. There's no code path that produces bad
+contrast. Try to find one.
 
 ```console
 $ npx notugly audit
@@ -41,17 +33,55 @@ $ npx notugly audit
   ✓ body text on background        20.54:1  needs 4.5  AAA
   ✓ muted text on background       11.85:1  needs 4.5  AAA
   ✓ button label on button          8.16:1  needs 4.5  AAA
-  ✓ focus ring on background        9.14:1  needs 3    pass
 
   Provably not ugly.
 ```
 
-**2,000 out of 2,000** randomly sampled systems pass. That number is regenerated
-on every build — if it ever drops, the build fails.
+2,000 random systems, 2,000 passes. The build regenerates that number every
+time and **fails if it slips**, which is a very stressful way to write a README
+claim.
 
----
+<br>
 
-## Pick a vibe
+## The avatars
+
+<p align="center">
+  <img src="assets/readme/styles.svg" alt="One name in thirteen avatar styles" width="100%">
+</p>
+
+Thirteen styles. Same name, same face, forever — `mo` will always be that
+specific bespectacled fellow.
+
+```console
+npx notugly avatar mo --style pencil
+```
+
+There are **pencil people** (stick figures with genuinely wobbly hand-drawn
+lines, not fake-wobbly), **specs** (a small round character whose whole
+personality is its glasses), plus cats, ghosts, die-cut stickers, and the
+usual geometric ones if you're boring.
+
+<details>
+<summary><b>The thing every other avatar library gets wrong</b></summary>
+
+<br>
+
+An avatar is a coloured disc sitting on *your* page background. If those two
+happen to be close in luminance, the edge dissolves and you get a floating
+face. Nobody checks for this. It looks broken and nobody knows why.
+
+Tell notugly what it's sitting on and it adds a separating ring — but only when
+it actually needs one:
+
+```console
+npx notugly avatar mo --on "#0b0d12"
+```
+
+</details>
+
+<br>
+
+## Five opinions
 
 <p align="center">
   <img src="assets/readme/vibe-editorial.svg" width="31%" alt="Editorial">
@@ -63,45 +93,19 @@ on every build — if it ever drops, the build fails.
   <img src="assets/readme/vibe-terminal.svg" width="31%" alt="Terminal">
 </p>
 
-Five complete opinions. Each one fixes the decisions that have to agree with
-each other — radius, shadow, chroma, type, motion — because that's what makes a
-design feel coherent rather than assembled by committee.
+Radius, shadow, saturation, type and motion all have to agree with each other
+or the thing looks like four people built it. So they're decided together.
 
 ```console
 npx notugly --vibe brutalist
 ```
 
-**[On the website, the entire page becomes the vibe you pick.](https://mohitagw15856.github.io/notugly)**
-That's the demo.
+**[On the website the whole page turns into the vibe you click.](https://mohitagw15856.github.io/notugly)**
+That's not a demo panel. That's the actual page.
 
----
+<br>
 
-<h2 id="avatars">Avatars 🙂</h2>
-
-<p align="center">
-  <img src="assets/readme/styles.svg" alt="One name in eight avatar styles" width="100%">
-</p>
-
-One name, eight styles. Deterministic — `mo` always gets the same face, forever.
-
-```console
-npx notugly avatar mo --style face --out mo.svg
-```
-
-**The bit other avatar libraries skip:** an avatar is a coloured disc sitting on
-*your* background. If those two are close in luminance, the edge dissolves. Tell
-notugly what it's sitting on and it fixes that:
-
-```console
-npx notugly avatar mo --on "#0b0d12"
-```
-
----
-
-<h2 id="take-it">Take it</h2>
-
-Six formats. **The byte count is next to each one**, because nobody else will
-tell you.
+## Then you take it
 
 ```console
 $ npx notugly export --out ./ui
@@ -113,82 +117,113 @@ $ npx notugly export --out ./ui
   Notugly.svelte           883 B
   index.html               4.4 kB
 
-  runtime cost  0 bytes — static text, no dependency, nothing to install
+  runtime cost  0 bytes
 ```
 
-Design tokens are plain CSS variables. The Tailwind config is a real config. The
-JSON is [W3C design-token](https://tr.designtokens.org/) shaped, so it goes
-straight into Style Dictionary or Figma.
+That last line is the point. It's all static text. No package, no provider, no
+`<ThemeProvider>` wrapping your entire app, nothing to `npm install` at 3am
+when it breaks.
 
----
+<br>
 
-## Steal a palette
+## Also it steals
 
 ```console
 $ npx notugly steal lichess.org
 
-  Colours  most used first
   #000000  ×55
   #f0d9b5  ×2
   #946f51  ×2
 ```
 
-*(Those last two are the chessboard squares.)*
+Those last two are the chessboard squares. It read them straight off the site.
 
-Point it at any site and get its palette, type stack, radii and scale back as
-something you can edit. It's a heuristic — it reads the CSS it can see — and
-it's a much better starting point than a blank slider.
+Point it at anything and get the palette, fonts and radii back as something you
+can edit. Yes, this is a bit cheeky.
 
----
+<br>
 
 ## The chaos test
 
-Design systems get demoed with three words of Latin and a square photograph.
-**Real content is a 47-character German compound noun, a name in Arabic, an
-image that 404s, and someone at 200% zoom.**
+Every design system gets demoed with three words of Latin and a square
+photograph.
+
+Real content is `Rindfleischetikettierungsüberwachungsaufgabenübertragungsgesetz`,
+a name in Arabic, an image that 404s, and someone at 200% zoom.
 
 ```console
 npx notugly chaos
 ```
 
-The [website runs every case live](https://mohitagw15856.github.io/notugly/#chaos)
-against whatever you've generated. Most kits shatter. This one advertises that
-it doesn't.
+The [site throws all of it at whatever you've made](https://mohitagw15856.github.io/notugly/#chaos).
+Most kits fall over. This one is quite smug about not doing that.
 
----
+<br>
 
-<h2 id="why-provably">Why "provably"</h2>
+## Why it isn't just vibes
 
-Because the claim is checkable, and the check is in the repo.
+<table>
+<tr><td>
 
-- **Colour maths in OKLab, not HSL.** In HSL, `#ffff00` and `#0000ff` are both
-  "50% lightness" and one is nine times brighter. That's why most generated
-  ramps look cheap.
-- **Text colour is derived from its background**, not picked and hoped for. If
-  no candidate clears the threshold, one gets built that does.
-- **Motion ships with `prefers-reduced-motion`** in the same file. Animation
-  without an escape hatch is a bug.
-- **No webfonts.** A system that costs 300 kB before it renders is a liability.
-- **Nothing is copied.** Every colour, shape and face is generated from a seed.
+**Colour maths in OKLab**
 
----
+</td><td>
 
-## Use it as a library
+In HSL, `#ffff00` and `#0000ff` are both "50% lightness". One is nine times
+brighter than the other. That's why generated ramps usually look cheap.
+
+</td></tr>
+<tr><td>
+
+**Motion ships its own off switch**
+
+</td><td>
+
+Every preset comes with `prefers-reduced-motion` in the same file. Animation
+without an escape hatch is a bug, not a flourish.
+
+</td></tr>
+<tr><td>
+
+**No webfonts**
+
+</td><td>
+
+300 kB before anything renders isn't a design system, it's a tax.
+
+</td></tr>
+<tr><td>
+
+**Nothing is copied**
+
+</td><td>
+
+Every colour, shape and face is generated from a seed. No scraped assets, no
+lifted palettes.
+
+</td></tr>
+</table>
+
+<br>
+
+## As a library
 
 ```js
 import { system, audit } from 'notugly';
 import { avatar } from 'notugly/avatar';
 
 const ui = system('my-app', { vibe: 'playful', dark: true });
-audit(ui).passed;              // true, or it's a bug
-avatar('mo', { on: ui.colour.bg });
+audit(ui).passed;                    // true. if it's false, that's my bug
+avatar('mo', { on: ui.colour.bg });  // never invisible
 ```
 
-Everything is deterministic. Same seed, same design, forever — which is what
-makes a design shareable as a URL and stable for a user's face.
+Same seed, same design, forever. Which means a design is a URL you can send
+someone, and a user's face never changes because a server restarted.
 
----
+<br>
 
 <p align="center">
-  <sub>MIT · zero dependencies · <a href="https://mohitagw15856.github.io/notugly">mohitagw15856.github.io/notugly</a></sub>
+  <sub>
+    MIT · no dependencies · <a href="https://mohitagw15856.github.io/notugly">the fun version of this page</a>
+  </sub>
 </p>

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="756" height="84" viewBox="0 0 756 84" role="img" aria-label="One name in eight avatar styles"><g transform="translate(0 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+<svg xmlns="http://www.w3.org/2000/svg" width="1236" height="84" viewBox="0 0 1236 84" role="img" aria-label="One name in eight avatar styles"><g transform="translate(0 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
     <rect width="100" height="100" fill="#da7181"/>
     
     <circle cx="50" cy="52" r="26" fill="#cab299"/>
@@ -11,16 +11,81 @@
     <g fill="none" stroke="#310c13" stroke-width="2"><circle cx="35" cy="50" r="9"/><circle cx="65" cy="50" r="9"/><path d="M44 50 h12"/></g>
     
     <ellipse cx="50" cy="64" rx="4.5" ry="5.5" fill="#310c13"/></g></g><g transform="translate(96 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    <rect width="100" height="100" fill="#faeff0"/>
+    
+    <path d="M69.7 38.0 Q65.6 43.6 63.7 51.7 Q55.9 54.3 50.0 57.2 Q43.8 55.8 36.5 51.5 Q34.1 45.4 31.9 38.0 Q34.0 30.3 37.5 25.5 Q43.8 24.0 50.0 19.9 Q57.5 22.8 63.5 24.5 Q67.4 30.0 69.4 38.0 Z" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50.0 18.0 Q51.5 14.0 52.0 11.0 Q48.8 12.7 46.0 14.0" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="43.5" cy="36" r="1.9786218605935573" fill="#310c13"/>
+    <circle cx="56.5" cy="36" r="1.9081356251612305" fill="#310c13"/>
+    <path d="M49.0 36.0 Q49.3 37.5 48.0 40.5 Q45.8 41.2 43.5 42.8 Q41.5 41.0 38.9 40.6 Q38.4 38.9 37.2 36.0 Q37.4 33.1 39.0 31.5 Q40.9 30.5 43.5 30.5 Q46.2 31.2 47.6 31.9 Q49.7 34.7 50.4 36.0 Z" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+         <path d="M61.7 36.0 Q61.6 38.2 60.6 40.1 Q59.4 40.9 56.5 42.6 Q54.7 41.0 52.9 39.6 Q51.3 38.4 50.0 36.0 Q51.4 33.8 52.8 32.3 Q54.0 30.1 56.5 29.3 Q58.2 30.9 61.1 31.4 Q61.3 33.7 61.8 36.0 Z" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+         <path d="M49.5 36.0 Q49.6 36.3 50.5 36.0" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M45.0 45.0 Q47.0 46.4 50.0 48.0 Q53.2 47.5 55.0 45.0" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50.0 57.0 Q51.3 67.1 50.0 76.2" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M27.3 72.2 Q39.6 66.9 50.0 60.2" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+           <path d="M50.0 60.2 Q60.4 67.6 72.7 72.2" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50.0 76.2 Q42.2 81.1 37.2 88.0" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50.0 76.2 Q57.6 82.6 62.8 88.0" fill="none" stroke="#310c13" stroke-width="2.657110919756815" stroke-linecap="round" stroke-linejoin="round"/></g></g><g transform="translate(192 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
     <rect width="100" height="100" fill="#da7181"/>
-    <rect x="26.62117152661085" y="15.21762700472027" width="25.772932652384043" height="25.772932652384043" rx="1.491383898537606" fill="#d06000" fill-opacity="0.9" transform="rotate(11.533595309592783 39.50763785280287 28.104093330912292)"/><polygon points="68.77387240063399,43.88389485515654 83.47336993459612,73.2828899230808 54.07437486667186,73.2828899230808" fill="#310c13" fill-opacity="0.9"/><circle cx="72.16819381341338" cy="44.378730659373105" r="9.693321169354022" fill="#ffe7e9" fill-opacity="0.9"/></g></g><g transform="translate(192 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    
+    <circle cx="50" cy="52" r="30" fill="#ffccba"/>
+    
+    <circle cx="37.68344083195552" cy="50" r="3.5710209120530636" fill="#310c13"/>
+         <circle cx="62.31655916804448" cy="50" r="3.5710209120530636" fill="#310c13"/>
+    <g fill="none" stroke="#310c13" stroke-width="2.9656211020424963">
+      <circle cx="37.68344083195552" cy="50" r="12.428705643862486"/>
+      <circle cx="62.31655916804448" cy="50" r="12.428705643862486"/>
+      <path d="M50.11214647581801 50 h-0.22429295163601637"/>
+      <path d="M25.254735188093036 49 l-6 -3"/>
+      <path d="M74.74526481190696 49 l6 -3"/>
+    </g>
+    <path d="M44 66 q6 6 12 0" fill="none" stroke="#310c13" stroke-width="2.6" stroke-linecap="round"/></g></g><g transform="translate(288 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
     <rect width="100" height="100" fill="#da7181"/>
-    <path d="M90.0 50.0 Q90.0 50.0 81.7 64.7 Q73.4 79.3 57.3 83.8 Q41.3 88.3 28.4 77.4 Q15.6 66.6 15.5 49.9 Q15.3 33.3 29.4 27.5 Q43.5 21.7 56.0 24.2 Q68.5 26.8 79.2 38.4 Z" fill="#d06000"/><path d="M90.0 50.0 Q90.0 50.0 81.7 64.7 Q73.4 79.3 57.3 83.8 Q41.3 88.3 28.4 77.4 Q15.6 66.6 15.5 49.9 Q15.3 33.3 29.4 27.5 Q43.5 21.7 56.0 24.2 Q68.5 26.8 79.2 38.4 Z" fill="#c578c3" fill-opacity="0.55" transform="translate(-6.025727406144142 -0.9752507619559765) scale(0.72) translate(19 19)"/></g></g><g transform="translate(288 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    
+    <path d="M26 44 l4 -20 l17 10 z" fill="#f9b884"/>
+    <path d="M74 44 l-4 -20 l-17 10 z" fill="#f9b884"/>
+    <ellipse cx="50" cy="56" rx="27" ry="24" fill="#f9b884"/>
+    <ellipse cx="37.377903171116486" cy="52" rx="3" ry="4.0344268274493515" fill="#310c13"/>
+         <ellipse cx="62.622096828883514" cy="52" rx="3" ry="4.749019266106188" fill="#310c13"/>
+    <path d="M47 63 l3 3 l3 -3 z" fill="#310c13"/>
+    <path d="M50 66 q-4 4 -8 1 M50 66 q4 4 8 1" stroke="#310c13" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <g stroke="#310c13" stroke-width="1.6" stroke-linecap="round" opacity=".7">
+      <path d="M22 58 h9 M22 64 h9 M78 58 h-9 M78 64 h-9"/>
+    </g></g></g><g transform="translate(384 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
     <rect width="100" height="100" fill="#da7181"/>
-    <rect x="26" y="10" width="16" height="16" fill="#310c13"/><rect x="58" y="10" width="16" height="16" fill="#310c13"/><rect x="10" y="26" width="16" height="16" fill="#310c13"/><rect x="74" y="26" width="16" height="16" fill="#310c13"/><rect x="10" y="42" width="16" height="16" fill="#310c13"/><rect x="74" y="42" width="16" height="16" fill="#310c13"/><rect x="26" y="42" width="16" height="16" fill="#310c13"/><rect x="58" y="42" width="16" height="16" fill="#310c13"/><rect x="26" y="74" width="16" height="16" fill="#d06000"/><rect x="58" y="74" width="16" height="16" fill="#d06000"/><rect x="42" y="74" width="16" height="16" fill="#c578c3"/></g></g><g transform="translate(384 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    
+    <path d="M28 52 a22 22 0 0 1 44 0 V74 q-2.75 7 -5.5 0 q-2.75 -7 -5.5 0 q-2.75 -7 -5.5 0 q-2.75 7 -5.5 0 q-2.75 7 -5.5 0 q-2.75 -7 -5.5 0 q-2.75 -7 -5.5 0 q-2.75 7 -5.5 0 Z" fill="#ffe7e9"/>
+    <circle cx="42" cy="47.30384335620329" r="3.4" fill="#310c13"/>
+    <circle cx="58" cy="47.30384335620329" r="3.4" fill="#310c13"/>
+    <path d="M45 57.30384335620329 q5 5 10 0" fill="none" stroke="#310c13" stroke-width="2.4" stroke-linecap="round"/></g></g><g transform="translate(480 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
     <rect width="100" height="100" fill="#da7181"/>
-    <circle cx="50" cy="50" r="42" fill="none" stroke="#ffe7e9" stroke-width="4.139632058562711" stroke-dasharray="none"/><circle cx="50" cy="50" r="33" fill="none" stroke="#310c13" stroke-width="4.636178081622347" stroke-dasharray="none"/><circle cx="50" cy="50" r="24" fill="none" stroke="#d06000" stroke-width="5.740036787232384" stroke-dasharray="13.752583974041045 3.0960346781648695"/><circle cx="50" cy="50" r="15" fill="none" stroke="#c578c3" stroke-width="7.965481343911961" stroke-dasharray="none"/></g></g><g transform="translate(480 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    
+    <g transform="translate(50 50) scale(0.78) translate(-50 -50)">
+      <circle cx="50" cy="50" r="46" fill="#ffe7e9"/>
+      <g>
+    <path d="M26 44 l4 -20 l17 10 z" fill="#f9b884"/>
+    <path d="M74 44 l-4 -20 l-17 10 z" fill="#f9b884"/>
+    <ellipse cx="50" cy="56" rx="27" ry="24" fill="#f9b884"/>
+    <ellipse cx="37.377903171116486" cy="52" rx="3" ry="4.0344268274493515" fill="#310c13"/>
+         <ellipse cx="62.622096828883514" cy="52" rx="3" ry="4.749019266106188" fill="#310c13"/>
+    <path d="M47 63 l3 3 l3 -3 z" fill="#310c13"/>
+    <path d="M50 66 q-4 4 -8 1 M50 66 q4 4 8 1" stroke="#310c13" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <g stroke="#310c13" stroke-width="1.6" stroke-linecap="round" opacity=".7">
+      <path d="M22 58 h9 M22 64 h9 M78 58 h-9 M78 64 h-9"/>
+    </g></g>
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#ffe7e9" stroke-width="8"/>
+      <circle cx="50" cy="50" r="49.5" fill="none" stroke="#310c13" stroke-width="1.5" stroke-opacity=".25"/>
+    </g></g></g><g transform="translate(576 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
     <rect width="100" height="100" fill="#da7181"/>
-    <text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="#310c13">I</text></g></g><g transform="translate(576 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    <rect x="26.62117152661085" y="15.21762700472027" width="25.772932652384043" height="25.772932652384043" rx="1.491383898537606" fill="#d06000" fill-opacity="0.9" transform="rotate(11.533595309592783 39.50763785280287 28.104093330912292)"/><polygon points="68.77387240063399,43.88389485515654 83.47336993459612,73.2828899230808 54.07437486667186,73.2828899230808" fill="#310c13" fill-opacity="0.9"/><circle cx="72.16819381341338" cy="44.378730659373105" r="9.693321169354022" fill="#ffe7e9" fill-opacity="0.9"/></g></g><g transform="translate(672 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    <rect width="100" height="100" fill="#da7181"/>
+    <path d="M90.0 50.0 Q90.0 50.0 81.7 64.7 Q73.4 79.3 57.3 83.8 Q41.3 88.3 28.4 77.4 Q15.6 66.6 15.5 49.9 Q15.3 33.3 29.4 27.5 Q43.5 21.7 56.0 24.2 Q68.5 26.8 79.2 38.4 Z" fill="#d06000"/><path d="M90.0 50.0 Q90.0 50.0 81.7 64.7 Q73.4 79.3 57.3 83.8 Q41.3 88.3 28.4 77.4 Q15.6 66.6 15.5 49.9 Q15.3 33.3 29.4 27.5 Q43.5 21.7 56.0 24.2 Q68.5 26.8 79.2 38.4 Z" fill="#c578c3" fill-opacity="0.55" transform="translate(-6.025727406144142 -0.9752507619559765) scale(0.72) translate(19 19)"/></g></g><g transform="translate(768 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    <rect width="100" height="100" fill="#da7181"/>
+    <rect x="26" y="10" width="16" height="16" fill="#310c13"/><rect x="58" y="10" width="16" height="16" fill="#310c13"/><rect x="10" y="26" width="16" height="16" fill="#310c13"/><rect x="74" y="26" width="16" height="16" fill="#310c13"/><rect x="10" y="42" width="16" height="16" fill="#310c13"/><rect x="74" y="42" width="16" height="16" fill="#310c13"/><rect x="26" y="42" width="16" height="16" fill="#310c13"/><rect x="58" y="42" width="16" height="16" fill="#310c13"/><rect x="26" y="74" width="16" height="16" fill="#d06000"/><rect x="58" y="74" width="16" height="16" fill="#d06000"/><rect x="42" y="74" width="16" height="16" fill="#c578c3"/></g></g><g transform="translate(864 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    <rect width="100" height="100" fill="#da7181"/>
+    <circle cx="50" cy="50" r="42" fill="none" stroke="#ffe7e9" stroke-width="4.139632058562711" stroke-dasharray="none"/><circle cx="50" cy="50" r="33" fill="none" stroke="#310c13" stroke-width="4.636178081622347" stroke-dasharray="none"/><circle cx="50" cy="50" r="24" fill="none" stroke="#d06000" stroke-width="5.740036787232384" stroke-dasharray="13.752583974041045 3.0960346781648695"/><circle cx="50" cy="50" r="15" fill="none" stroke="#c578c3" stroke-width="7.965481343911961" stroke-dasharray="none"/></g></g><g transform="translate(960 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    <rect width="100" height="100" fill="#da7181"/>
+    <text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="#310c13">I</text></g></g><g transform="translate(1056 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
     <rect width="100" height="100" fill="#da7181"/>
     
     <polygon points="32.86014663055539,34 48.86014663055539,26 64.86014663055539,34 48.86014663055539,42" fill="#ffe7e9"/>
@@ -31,7 +96,7 @@
     <polygon points="68.899369828403,50 52.899369828402996,58 52.899369828402996,75.6 68.899369828403,67.6" fill="#c578c3"/>
     <polygon points="26.800576575100422,66 42.80057657510042,58 58.80057657510042,66 42.80057657510042,74" fill="#ffe7e9"/>
     <polygon points="26.800576575100422,66 42.80057657510042,74 42.80057657510042,91.6 26.800576575100422,83.6" fill="#d06000"/>
-    <polygon points="58.80057657510042,66 42.80057657510042,74 42.80057657510042,91.6 58.80057657510042,83.6" fill="#c578c3"/></g></g><g transform="translate(672 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
+    <polygon points="58.80057657510042,66 42.80057657510042,74 42.80057657510042,91.6 58.80057657510042,83.6" fill="#c578c3"/></g></g><g transform="translate(1152 0) scale(0.84)"><defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#c)">
     <rect width="100" height="100" fill="#da7181"/>
     <path d="M0 50 A50 50 0 0 1 100 50 Z" fill="#ffe7e9"/>
     <circle cx="67.46570602059364" cy="55.51939005032182" r="14.076410034205765" fill="#c578c3"/>
