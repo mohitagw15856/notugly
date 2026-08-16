@@ -103,12 +103,15 @@ function renderTokens(sys) {
   $('#textures').innerHTML =
     PATTERNS.slice(0, 4)
       .map((p) => {
-        const pat = pattern(p, { colour: sys.colour.text, opacity: 0.16, seed: sys.seed });
+        // The page uses these at ~4% so they whisper. In a swatch that reads
+        // as an empty box, so the preview is deliberately louder than the
+        // real thing.
+        const pat = pattern(p, { colour: sys.colour.text, opacity: 0.42, seed: sys.seed });
         return `<div class="tex" style="background-image:${pat.dataUri}"><span>${p}</span></div>`;
       })
       .join('') +
     `<div class="tex" style="color:var(--brand)">${blob(sys.seed, { size: 100 }).svg}<span>blob</span></div>` +
-    `<div class="tex" style="color:var(--brand);display:grid;place-items:center">${divider('wave', { width: 100, height: 40, seed: sys.seed }).svg}<span>divider</span></div>`;
+    `<div class="tex" style="color:var(--brand);display:grid;place-items:center">${divider('wave', { width: 100, height: 40, seed: sys.seed }).svg}<span class="on-top">divider</span></div>`;
 
   $('#gradbox').style.cssText = sys.gradient.css;
   $('#gradcss').textContent = sys.gradient.css;

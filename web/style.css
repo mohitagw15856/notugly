@@ -296,3 +296,6 @@ footer .fine { font-size: 0.82rem; }
   *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
   .reveal > * { opacity: 1; transform: none; }
 }
+
+/* Swatch labels sit above the artwork they describe. */
+.tex span.on-top { z-index: 1; background: color-mix(in srgb, var(--bg) 75%, transparent); padding: 0 3px; border-radius: 3px; }
