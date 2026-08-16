@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # No install step. There are no dependencies.
+      - name: Tests
+        run: npm test
+
+      - name: The central claim, on 2000 fresh systems
+        run: npm run build
+
+      - name: The CLI works
+        run: |
+          node bin/notugly.mjs > /dev/null
+          node bin/notugly.mjs --vibe brutalist --dark > /dev/null
+          node bin/notugly.mjs avatar mo --style pixel > /dev/null
+          node bin/notugly.mjs audit
+          node bin/notugly.mjs vibes > /dev/null
+          node bin/notugly.mjs chaos > /dev/null
+          node bin/notugly.mjs export --out /tmp/ui
+          test -s /tmp/ui/notugly.css
+          test -s /tmp/ui/tokens.json
+          node -e "JSON.parse(require('fs').readFileSync('/tmp/ui/tokens.json'))"
+
+      - name: The library runs in a browser
+        run: npm run build:site
+
+      - name: Generated files are committed
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::assets/readme is out of date. Run 'npm run build' and commit."
+            git diff --stat
+            exit 1
+          fi
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm run build:site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

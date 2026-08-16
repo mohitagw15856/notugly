@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>notugly — designs that are provably not ugly</title>
+<meta name="description" content="Generate a whole design system from a seed. Every text pairing clears WCAG AA before you see it. Export CSS, Tailwind, tokens, React, Svelte or HTML. No runtime, no dependency.">
+<meta property="og:title" content="notugly — designs that are provably not ugly">
+<meta property="og:description" content="Pick a vibe, watch this entire page become it, then take the CSS. Accessibility checked at generation time, not after.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%234f46e5'/><circle cx='36' cy='44' r='7'/><circle cx='64' cy='44' r='7'/><path d='M34 64 q16 14 32 0' stroke='%23000' stroke-width='5' fill='none' stroke-linecap='round'/></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+
+<!-- Everything on this page is themed by the system currently generated.
+     Change the seed and the page you are reading becomes the design. -->
+<nav class="nav">
+  <a class="brand" href="#top">
+    <span id="brand-avatar" aria-hidden="true"></span>
+    <b>notugly</b>
+  </a>
+  <div class="navlinks">
+    <a href="#make">Make</a>
+    <a href="#preview">Preview</a>
+    <a href="#avatars">Avatars</a>
+    <a href="#chaos">Chaos</a>
+    <a href="#export">Export</a>
+    <a href="#gallery">Gallery</a>
+  </div>
+  <a class="btn ghost" href="https://github.com/mohitagw15856/notugly">GitHub ↗</a>
+</nav>
+
+<header class="hero" id="top">
+  <p class="eyebrow"><span class="dot"></span> every pairing below clears WCAG AA — checked, not claimed</p>
+  <h1>Designs that are<br><em>provably</em> not ugly.</h1>
+  <p class="lede">
+    Pick a vibe. <b>This entire page becomes it.</b> Then take the CSS —
+    no runtime, no dependency, nothing to install.
+  </p>
+
+  <div class="vibes" id="vibes" role="tablist" aria-label="Design vibe"></div>
+
+  <div class="seedbar">
+    <label for="seed">seed</label>
+    <input id="seed" value="notugly" autocomplete="off" spellcheck="false" aria-label="Design seed">
+    <button id="reroll" class="btn primary">Reroll</button>
+    <button id="mode" class="btn" aria-pressed="false">Dark</button>
+    <button id="copylink" class="btn ghost">Copy link</button>
+  </div>
+
+  <p class="hint" id="hint"></p>
+</header>
+
+<main>
+
+<!-- ---------------------------------------------------------------- -->
+<section id="make" class="reveal">
+  <h2><span class="tag">01</span> The system</h2>
+  <p class="lede">Generated from the seed. Every number here is derived, not typed.</p>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h3>Colour</h3>
+      <div class="ramps" id="ramps"></div>
+      <table class="tokens" id="colour-tokens"></table>
+    </div>
+
+    <div class="panel">
+      <h3>Type</h3>
+      <div id="type-preview" class="type-preview"></div>
+      <table class="tokens" id="type-tokens"></table>
+    </div>
+
+    <div class="panel">
+      <h3>Elevation</h3>
+      <div class="elevations" id="elevations"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Texture &amp; shape</h3>
+      <div class="textures" id="textures"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Gradient</h3>
+      <div class="gradbox" id="gradbox"></div>
+      <pre class="code" id="gradcss"></pre>
+    </div>
+
+    <div class="panel">
+      <h3>Motion</h3>
+      <div class="motionbox" id="motionbox"></div>
+      <button id="replay" class="btn sm">Play again</button>
+    </div>
+  </div>
+</section>
+
+<!-- ---------------------------------------------------------------- -->
+<section id="preview" class="reveal">
+  <h2><span class="tag">02</span> On something real</h2>
+  <p class="lede">
+    A swatch grid tells you nothing. Here is the system on an actual interface —
+    <em>and in every context it has to survive.</em>
+  </p>
+
+  <div class="tabs" id="demo-tabs"></div>
+  <div class="demo-frame" id="demo"></div>
+
+  <h3 class="sub">Every context at once</h3>
+  <div class="contexts" id="contexts"></div>
+</section>
+
+<!-- ---------------------------------------------------------------- -->
+<section id="avatars" class="reveal">
+  <h2><span class="tag">03</span> Avatars</h2>
+  <p class="lede">
+    Deterministic from a name, so a person's face never changes. Eight styles,
+    and <em>the contrast is checked against the page behind it</em> — which is the
+    bit that makes them actually usable.
+  </p>
+
+  <div class="avbar">
+    <input id="avname" value="mo" autocomplete="off" aria-label="Name for the avatar">
+    <div class="chips" id="avstyles"></div>
+  </div>
+  <div class="avgrid" id="avgrid"></div>
+</section>
+
+<!-- ---------------------------------------------------------------- -->
+<section id="chaos" class="reveal">
+  <h2><span class="tag">04</span> The chaos test</h2>
+  <p class="lede">
+    Design systems are demonstrated with three words of Latin and a square
+    photograph. <em>Real content is not like that.</em> Here is the same system
+    handling the things that actually break layouts.
+  </p>
+  <div class="chaosgrid" id="chaosgrid"></div>
+  <div class="panel" id="staticchecks"></div>
+</section>
+
+<!-- ---------------------------------------------------------------- -->
+<section id="export" class="reveal">
+  <h2><span class="tag">05</span> Take it</h2>
+  <p class="lede">Six formats. The byte count is next to each one, because nobody else will tell you.</p>
+
+  <div class="tabs" id="export-tabs"></div>
+  <div class="exportbox">
+    <div class="exporthead">
+      <span id="export-size"></span>
+      <button id="copycode" class="btn sm">Copy</button>
+      <button id="download" class="btn sm">Download</button>
+    </div>
+    <pre class="code tall" id="export-code"></pre>
+  </div>
+
+  <div class="report panel" id="report"></div>
+</section>
+
+<!-- ---------------------------------------------------------------- -->
+<section id="gallery" class="reveal">
+  <h2><span class="tag">06</span> Seeds worth stealing</h2>
+  <p class="lede">Every design here is a link. Click one and the page becomes it.</p>
+  <div class="gallery" id="gallery-grid"></div>
+</section>
+
+</main>
+
+<footer>
+  <p><b>notugly</b> — nothing here is copied. Every colour, shape and avatar is generated from a seed.</p>
+  <p class="fine">
+    MIT. Zero dependencies. <a href="https://github.com/mohitagw15856/notugly">Source</a> ·
+    <a href="https://www.npmjs.com/package/notugly">npm</a>
+  </p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

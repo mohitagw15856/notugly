@@ -1,0 +1,34 @@
+{
+  "name": "notugly",
+  "version": "0.1.0",
+  "description": "Designs that are provably not ugly. Generate a whole design system from a seed — every text pairing clears WCAG AA before you see it. Export CSS, Tailwind, tokens, React, Svelte or HTML. Zero dependencies, zero runtime.",
+  "type": "module",
+  "bin": { "notugly": "bin/notugly.mjs" },
+  "exports": {
+    ".": "./lib/system.mjs",
+    "./avatar": "./lib/avatar.mjs",
+    "./color": "./lib/color.mjs",
+    "./export": "./lib/export.mjs",
+    "./seed": "./lib/seed.mjs"
+  },
+  "files": ["bin/", "lib/", "LICENSE"],
+  "scripts": {
+    "build": "node scripts/build-readme.mjs",
+    "build:site": "node scripts/build-site.mjs",
+    "test": "node scripts/test.mjs",
+    "audit": "node bin/notugly.mjs audit",
+    "ci": "npm test && npm run build && npm run build:site"
+  },
+  "keywords": [
+    "design-system", "avatar", "avatars", "color-palette", "colour",
+    "accessibility", "wcag", "contrast", "generator", "oklch", "oklab",
+    "design-tokens", "tailwind", "css-variables", "svg", "zero-dependency",
+    "ui", "theme", "gradient", "not-ugly"
+  ],
+  "author": "Mohit (mohitagw15856)",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/mohitagw15856/notugly.git" },
+  "homepage": "https://mohitagw15856.github.io/notugly",
+  "bugs": "https://github.com/mohitagw15856/notugly/issues",
+  "engines": { "node": ">=18" }
+}

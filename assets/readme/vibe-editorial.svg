@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="190" viewBox="0 0 320 190" role="img" aria-label="Editorial vibe">
+      <rect width="320" height="190" rx="3" fill="#ffffff" stroke="#b8c4c6"/>
+      <text x="16" y="42" font-family="Charter, serif" font-size="26" font-weight="bold" fill="#020404">Editorial</text>
+      <rect x="16" y="60" width="120" height="34" rx="2" fill="#00586f"/>
+      <text x="76" y="82" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#ffffff">Button</text>
+      <text x="150" y="82" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#2f393c">muted text</text>
+      <rect x="16" y="120" width="30" height="30" rx="1" fill="#74d3df"/><rect x="52" y="120" width="30" height="30" rx="1" fill="#44bbcc"/><rect x="88" y="120" width="30" height="30" rx="1" fill="#00a3b8"/><rect x="124" y="120" width="30" height="30" rx="1" fill="#008aa3"/><rect x="160" y="120" width="30" height="30" rx="1" fill="#00708a"/><rect x="196" y="120" width="30" height="30" rx="1" fill="#00586f"/><rect x="232" y="120" width="30" height="30" rx="1" fill="#004054"/><rect x="268" y="120" width="30" height="30" rx="1" fill="#002a3c"/>
+      <text x="16" y="175" font-family="ui-monospace, monospace" font-size="10" fill="#2f393c">8:1 weakest · WCAG AA</text>
+    </svg>

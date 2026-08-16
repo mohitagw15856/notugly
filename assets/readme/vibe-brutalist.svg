@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="190" viewBox="0 0 320 190" role="img" aria-label="Brutalist vibe">
+      <rect width="320" height="190" rx="0" fill="#ffffff" stroke="#c8bfc2"/>
+      <text x="16" y="42" font-family="Rockwell, serif" font-size="26" font-weight="bold" fill="#040303">Brutalist</text>
+      <rect x="16" y="60" width="120" height="34" rx="0" fill="#930046"/>
+      <text x="76" y="82" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#ffffff">Button</text>
+      <text x="150" y="82" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#3d3437">muted text</text>
+      <rect x="16" y="120" width="30" height="30" rx="0" fill="#ff93d0"/><rect x="52" y="120" width="30" height="30" rx="0" fill="#ff5fb7"/><rect x="88" y="120" width="30" height="30" rx="0" fill="#f53199"/><rect x="124" y="120" width="30" height="30" rx="0" fill="#dd007c"/><rect x="160" y="120" width="30" height="30" rx="0" fill="#b60060"/><rect x="196" y="120" width="30" height="30" rx="0" fill="#930046"/><rect x="232" y="120" width="30" height="30" rx="0" fill="#70002f"/><rect x="268" y="120" width="30" height="30" rx="0" fill="#4e001b"/>
+      <text x="16" y="175" font-family="ui-monospace, monospace" font-size="10" fill="#3d3437">9.02:1 weakest · WCAG AA</text>
+    </svg>
