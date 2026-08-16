@@ -456,3 +456,61 @@ i.sw { display: inline-block; width: 16px; height: 16px; border-radius: 3px; bor
 @media (prefers-reduced-motion: reduce) {
   #nu-mascot-pupils, #nu-mascot-mouth, #nu-mascot-brows, .bside { transition: none; }
 }
+
+/* --- the room ------------------------------------------------------------ */
+.roomgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1rem; }
+.roomgrid .panel h3 { margin: 0 0 .3rem; font-family: var(--font-heading); }
+
+.drop {
+  display: grid; place-items: center; min-height: 90px; margin: .8rem 0;
+  border: 2px dashed var(--border); border-radius: var(--radius-lg);
+  color: var(--text-muted); font-size: .85rem; cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.drop:hover, .drop.over { border-color: var(--focus); background: var(--surface-alt); }
+.fromimg { display: grid; gap: .4rem; margin-bottom: .6rem; }
+.fromimg div { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+.fromimg i { width: 26px; height: 26px; border-radius: 5px; border: 1px solid var(--border); flex: none; }
+.fromimg span { margin-left: auto; font-family: var(--font-mono); font-size: .72rem; }
+
+.log { margin: .6rem 0; padding-left: 1.2rem; font-size: .88rem; max-height: 220px; overflow-y: auto; }
+.log li { margin-bottom: .3rem; }
+
+/* --- printed sheets ------------------------------------------------------ */
+.papergrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin: 1rem 0; }
+.sheet { margin: 0; }
+.sheet > div {
+  background: #fff; border: 1px solid var(--border); border-radius: 2px;
+  box-shadow: var(--shadow); overflow: hidden; line-height: 0;
+}
+.sheet svg { display: block; }
+.sheet figcaption { font-family: var(--font-mono); font-size: .72rem; color: var(--text-muted); padding-top: .4rem; }
+
+/* --- eras ---------------------------------------------------------------- */
+.eragrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.era { margin: 0; }
+.era svg { width: 100%; height: auto; display: block; border: 1px solid var(--border); border-radius: var(--radius); }
+.era figcaption { font-size: .82rem; padding-top: .45rem; }
+
+/* --- present mode -------------------------------------------------------- */
+/* Everything that could change the design, hidden. The design itself, not. */
+body.presenting .seedbar,
+body.presenting .vibes,
+body.presenting .avbar,
+body.presenting .remix,
+body.presenting .chips,
+body.presenting .tabs,
+body.presenting .exporthead,
+body.presenting .fixbar,
+body.presenting #roastin,
+body.presenting .keys,
+body.presenting .btn,
+body.presenting .mascotwrap,
+body.presenting #battle { display: none !important; }
+/* …except the way out, which stays. */
+body.presenting #present {
+  display: inline-flex !important; position: fixed; right: 1rem; bottom: 1rem; z-index: 40;
+  opacity: .35; transition: opacity .2s ease;
+}
+body.presenting #present:hover, body.presenting #present:focus-visible { opacity: 1; }
+body.presenting .hint { opacity: .6; }

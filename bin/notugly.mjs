@@ -23,6 +23,16 @@ import { checkVision, simulate, VISION } from '../lib/vision.mjs';
 import { printReport } from '../lib/print.mjs';
 import { apcaAdvice } from '../lib/apca.mjs';
 import { toFigma, toVsCode } from '../lib/targets.mjs';
+import { specSheet, specMarkdown, compare, compareMarkdown, onePager, onePagerHtml, costOf } from '../lib/spec.mjs';
+import { name as nameColour, nameAll } from '../lib/names.mjs';
+import { toThmx, toSlidesGuide, toSlidesJson, chartLegibility } from '../lib/slides.mjs';
+import { poster, specimen, zine, printWarnings, PAPER } from '../lib/paper.mjs';
+import { allEras, inEra, eraCard, ERAS } from '../lib/era.mjs';
+import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
+import { snapshot, drift, driftText } from '../lib/drift.mjs';
+import { auditTokens, toStorybook } from '../lib/ingest.mjs';
+import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const argv = process.argv.slice(2);
 const COLOR = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -65,6 +75,28 @@ function usage(code = 0) {
   ${bold('notugly print')} [seed]              what survives CMYK
   ${bold('notugly figma')} [seed]              a loadable Figma plugin
   ${bold('notugly vscode')} [seed]             an editor theme from the same system
+
+${dim('for the people who have to present it')}
+  ${bold('notugly spec')} <url>                what is that design made of, as a table
+  ${bold('notugly diff')} <url> <url>          two designs, with the differences called out
+  ${bold('notugly onepager')} [seed|url]       one printable page: what fails and what it costs
+  ${bold('notugly cost')} <url>                kilobytes and hours, from measured counts
+  ${bold('notugly slides')} [seed]             a real .thmx theme for PowerPoint and Keynote
+
+${dim('for the people who have to make it')}
+  ${bold('notugly poster')} [seed]             the system as a printable A3
+  ${bold('notugly specimen')} [seed]           a proper type specimen sheet
+  ${bold('notugly zine')} [seed]               eight pages on one sheet, imposed for folding
+  ${bold('notugly name')} <hex...>             what colour is that, in words
+  ${bold('notugly stickers')} <name>           animated persona stickers for Slack
+  ${bold('notugly eras')} [seed]               the same design in 1998, 2008, 2015 and now
+
+${dim('for keeping it')}
+  ${bold('notugly watch')} <url> [baseline]    what changed since last time
+  ${bold('notugly check')} <url>               fail the build on a contrast regression
+  ${bold('notugly tokens')} <file.json>        audit somebody else's tokens or Figma export
+  ${bold('notugly storybook')} [seed]          a Storybook story for the system
+  ${bold('notugly team')} <org> <who...>       one seed, a whole company
 
 ${dim('options')}  --vibe ${VIBE_NAMES.join('|')}   --dark   --style ${STYLES.slice(0, 4).join('|')}…
          --out <dir>   --size <px>   --seed <seed>   --brand <#hex>
@@ -445,6 +477,300 @@ function cmdTarget(args, name, make, hint) {
   console.log(`  ${dim(hint)}\n`);
 }
 
+
+// --- documents for other people ---------------------------------------------
+
+const readDna = async (target) => {
+  if (/^https?:|\./.test(target) && !existsSync(target)) return extract(target.startsWith('http') ? target : `https://${target}`);
+  const json = JSON.parse(readFileSync(target, 'utf8'));
+  return json.colours ? json : { colours: (json.palette ?? []).map((v) => ({ value: v })), fonts: [], radii: [], fontSizes: [], shadows: [] };
+};
+
+async function cmdSpec(args) {
+  const target = args[0];
+  if (!target) { console.error('What am I looking at? Try: notugly spec stripe.com'); process.exit(2); }
+  const dna = await readDna(target);
+  const spec = specSheet(dna);
+  const out = flag('out', null);
+  if (out) { writeFileSync(out, specMarkdown(spec)); console.log(`\n  Wrote ${bold(out)}\n`); return; }
+
+  console.log(`\n  ${bold(spec.title)}  ${dim(`${spec.palette.length} colours · ${spec.greys} grey`)}\n`);
+  for (const p of spec.palette.slice(0, 14)) {
+    console.log(
+      `  ${swatch(p.hex, 4)} ${p.hex.padEnd(9)} ${p.name.padEnd(20)} ${dim(String(p.onBackground).padStart(6) + ':1')}  ${dim(p.role)}`
+    );
+  }
+  console.log(`\n  ${dim('type'.padEnd(8))} ${spec.type.families.join(', ') || 'none found'}`);
+  console.log(`  ${dim('scale'.padEnd(8))} ${spec.type.note}`);
+  console.log(`  ${dim('radii'.padEnd(8))} ${spec.radiusNote}`);
+  if (spec.failing.length) {
+    console.log(`\n  ${c(31, `${spec.failing.length} will not pass as text:`)}`);
+    for (const f of spec.failing) console.log(`    ${f.hex} ${dim(`${f.onBackground}:1`)}`);
+  }
+  console.log(`\n  ${dim('notugly spec ' + target + ' --out spec.md  writes it as markdown')}\n`);
+}
+
+async function cmdDiff(args) {
+  const [a, b] = args.filter((x) => !x.startsWith('--'));
+  if (!a || !b) { console.error('Two things to compare: notugly diff stripe.com linear.app'); process.exit(2); }
+  const cmp = compare(await readDna(a), await readDna(b), { labels: [a, b] });
+  const out = flag('out', null);
+  if (out) { writeFileSync(out, compareMarkdown(cmp)); console.log(`\n  Wrote ${bold(out)}\n`); return; }
+
+  const w = Math.max(a.length, b.length, 16);
+  console.log(`\n  ${bold('')}${''.padEnd(18)}${dim(a.padEnd(w))}  ${dim(b)}\n`);
+  for (const r of cmp.rows) {
+    const mark = r.winner === null ? dim(' —') : c(32, ` ${cmp.labels[r.winner]} by ${r.delta}`);
+    console.log(`  ${r.label.padEnd(18)}${String(r.a).padEnd(w)}  ${String(r.b).padEnd(w)}${mark}`);
+  }
+  console.log(`\n  ${dim(`Type scale consistent: ${a} ${cmp.scaleAgreement[a] ? 'yes' : 'no'} · ${b} ${cmp.scaleAgreement[b] ? 'yes' : 'no'}`)}`);
+  console.log(`  ${bold(cmp.tidier)} is the more consistent. ${dim('That is a measurement, not a verdict on which looks better.')}\n`);
+}
+
+async function cmdOnePager(args) {
+  const target = args[0];
+  const input = target && /[.\/]/.test(target)
+    ? await readDna(target)
+    : system(target || flag('seed', 'notugly'), { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const page = onePager(input, { title: flag('title', target ? `${target} — accessibility review` : 'Accessibility review') });
+  const out = flag('out', null);
+  if (out) {
+    writeFileSync(out, onePagerHtml(page));
+    console.log(`\n  Wrote ${bold(out)}  ${dim('open it and print to PDF — it fits one sheet')}\n`);
+    return;
+  }
+  console.log(`\n  ${bold(page.title)}\n`);
+  for (const p of page.pairs) {
+    console.log(
+      `  ${p.pass ? c(32, '✓') : c(31, '✗')} ${(p.label ?? p.name).padEnd(16)} ${swatch(p.fg, 4)} ${String(p.ratio).padStart(6)}:1  ${dim(`needs ${p.target}`)}` +
+        (p.fix ? dim(`   → ${p.fix}`) : '')
+    );
+  }
+  console.log(`\n  ${bold(page.verdict)}`);
+  console.log(`  ${page.headline}\n`);
+  console.log(`  ${dim('notugly onepager --out review.html  writes the printable version')}\n`);
+}
+
+async function cmdCost(args) {
+  const target = args[0];
+  if (!target) { console.error('Point me at something: notugly cost stripe.com'); process.exit(2); }
+  const cost = costOf(await readDna(target));
+  console.log(`\n  ${bold(target)}\n`);
+  console.log(`  ${dim('weight'.padEnd(12))} ${cost.weight.kb} kB of webfont${cost.weight.names.length ? dim(`  (${cost.weight.names.join(', ')})`) : ''}`);
+  console.log(`  ${' '.repeat(12)} ${dim(cost.weight.note)}\n`);
+  console.log(`  ${dim('to fix'.padEnd(12))} ${cost.fixes.failing} failing pairing(s), ${cost.fixes.nudges} of them a nudge`);
+  console.log(`  ${' '.repeat(12)} ${cost.fixes.redundantGreys} redundant grey(s), ${cost.fixes.extraFonts} typeface(s) to remove\n`);
+  console.log(`  ${bold(`${cost.hours} hours`)} ${dim(`(~${cost.days} days)`)}`);
+  console.log(`  ${dim(cost.basis)}\n`);
+}
+
+function cmdSlides(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const chart = chartLegibility(sys);
+  const out = flag('out', null);
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    writeFileSync(`${out}/notugly-${seed}.thmx`, Buffer.from(toThmx(sys)));
+    writeFileSync(`${out}/google-slides.txt`, toSlidesGuide(sys));
+    writeFileSync(`${out}/theme.json`, toSlidesJson(sys));
+    console.log(`\n  Wrote a .thmx, a Google Slides guide and the raw JSON to ${bold(out)}`);
+    console.log(`  ${dim('Double-click the .thmx in PowerPoint, or Keynote > Change Theme.')}\n`);
+    return;
+  }
+  console.log(toSlidesGuide(sys));
+  console.log(`  ${chart.passed ? c(32, '✓ all six chart accents are distinguishable') : c(31, '✗ chart accents clash')}`);
+  console.log(`  ${dim(`notugly slides ${seed} --out ./deck  writes the theme file`)}\n`);
+}
+
+// --- things you print --------------------------------------------------------
+
+function cmdPaper(args, kind) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const size = flag('size', kind === 'poster' ? 'A3' : 'A4');
+  const gamut = !has('no-gamut');
+  const make = {
+    poster: () => poster(sys, { size, gamut, title: flag('title', null) }),
+    specimen: () => specimen(sys, { size, gamut }),
+    zine: () =>
+      zine(
+        sys,
+        Array.from({ length: 8 }, (_, i) => ({
+          title: i === 0 ? String(seed) : `${i + 1}`,
+          body: i === 0 ? 'A design system, folded.' : 'Replace this page via the library API.',
+        })),
+        { size, gamut }
+      ),
+  }[kind];
+
+  const svg = make();
+  const out = flag('out', null);
+  if (out) {
+    writeFileSync(out, svg);
+    const warn = printWarnings(sys);
+    console.log(`\n  Wrote ${bold(out)}  ${dim(`${size}, true size`)}`);
+    if (!warn.safe) for (const w of warn.warnings) console.log(`  ${c(33, '!')} ${dim(w.says)}`);
+    else console.log(`  ${c(32, '✓')} ${dim('every colour is inside the CMYK gamut')}`);
+    console.log();
+    return;
+  }
+  console.log(svg);
+}
+
+function cmdName(args) {
+  const hexes = args.filter((a) => a.startsWith('#'));
+  if (!hexes.length) { console.error('Some colours, please: notugly name "#4f76b6"'); process.exit(2); }
+  console.log();
+  for (const n of nameAll(hexes)) {
+    console.log(`  ${swatch(n.hex)} ${n.hex.padEnd(9)} ${bold(n.name.padEnd(22))} ${dim(n.exact ? 'close match' : 'nearest')}`);
+  }
+  console.log();
+}
+
+function cmdStickers(args) {
+  const seed = args[0];
+  if (!seed) { console.error('Whose stickers? Try: notugly stickers mo'); process.exit(2); }
+  const p = persona(seed, { dark: has('dark'), archetype: flag('archetype', null) });
+  const out = flag('out', null);
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    const pack = stickerPack(p, { size: Number(flag('size', 160)) });
+    for (const [file, svg] of Object.entries(pack)) writeFileSync(`${out}/${file}`, svg);
+    console.log(`\n  Wrote ${bold(String(Object.keys(pack).length))} animated stickers to ${bold(out)}`);
+    console.log(`  ${dim('SMIL, not CSS — chat clients strip <style> and keep <animate>.')}\n`);
+    return;
+  }
+  console.log(sticker(p, { motion: flag('motion', 'bob'), size: Number(flag('size', 160)) }));
+}
+
+function cmdEras(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const out = flag('out', null);
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    for (const r of allEras(sys)) writeFileSync(`${out}/${r.era.year}.svg`, eraCard(r, { width: 420, height: 280 }));
+    console.log(`\n  Wrote ${bold(String(ERAS.length))} era cards to ${bold(out)}\n`);
+    return;
+  }
+  console.log(`\n  ${bold('The same design, four decades')}  ${dim(`seed ${sys.seed}`)}\n`);
+  for (const r of allEras(sys)) {
+    console.log(`  ${bold(String(r.era.year))}  ${r.era.label}`);
+    console.log(`        ${dim(r.era.blurb)}`);
+    console.log(
+      `        ${dim('radius')} ${String(r.radius).padEnd(4)} ${dim('type')} ${r.type.heading.split(',')[0].replace(/"/g, '')}`
+    );
+    console.log();
+  }
+  console.log(`  ${dim('Every one of these was, at the time, what modern looked like.')}\n`);
+}
+
+// --- keeping it --------------------------------------------------------------
+
+async function cmdWatch(args) {
+  const url = args[0];
+  if (!url) { console.error('Which site? Try: notugly watch example.com'); process.exit(2); }
+  const file = args[1] || flag('baseline', 'notugly-baseline.json');
+  const dna = await extract(url.startsWith('http') ? url : `https://${url}`);
+  const now = snapshot(dna, { at: flag('at', new Date().toISOString().slice(0, 10)) });
+
+  if (!existsSync(file)) {
+    writeFileSync(file, JSON.stringify(now, null, 2));
+    console.log(`\n  No baseline yet — wrote one to ${bold(file)}.`);
+    console.log(`  ${dim('Commit it. Next run will tell you what changed.')}\n`);
+    return;
+  }
+
+  const before = JSON.parse(readFileSync(file, 'utf8'));
+  const report = drift(before, now);
+  console.log('\n' + driftText(report) + '\n');
+  if (has('update')) {
+    writeFileSync(file, JSON.stringify(now, null, 2));
+    console.log(`  ${dim(`Baseline updated: ${file}`)}\n`);
+  } else if (report.drifted) {
+    console.log(`  ${dim(`notugly watch ${url} --update  accepts this as the new baseline`)}\n`);
+  }
+  if (report.level === 'error' && has('strict')) process.exit(1);
+}
+
+async function cmdCheck(args) {
+  const target = args[0];
+  if (!target) { console.error('Check what? Try: notugly check example.com'); process.exit(2); }
+  const dna = await readDna(target);
+  const page = onePager(dna, { title: target });
+  const spec = specSheet(dna);
+
+  console.log(`\n  ${bold('notugly check')}  ${dim(target)}\n`);
+  for (const p of page.failing) {
+    console.log(`  ${c(31, '✗')} ${p.fg} on ${p.over} is ${p.ratio}:1 ${dim(`(needs ${p.target})`)}${p.fix ? dim(` → ${p.fix}`) : ''}`);
+  }
+  const maxGreys = Number(flag('max-greys', 8));
+  const maxFonts = Number(flag('max-fonts', 3));
+  const problems = [...page.failing];
+  if (spec.greys > maxGreys) {
+    console.log(`  ${c(31, '✗')} ${spec.greys} greys (limit ${maxGreys})`);
+    problems.push('greys');
+  }
+  if (spec.type.families.length > maxFonts) {
+    console.log(`  ${c(31, '✗')} ${spec.type.families.length} typefaces (limit ${maxFonts})`);
+    problems.push('fonts');
+  }
+
+  if (!problems.length) {
+    console.log(`  ${c(32, '✓ nothing to report')}\n`);
+    return;
+  }
+  console.log(`\n  ${c(31, `${problems.length} problem(s).`)} ${dim('Exit code 1 — this is the bit that fails a build.')}\n`);
+  process.exit(1);
+}
+
+function cmdTokens(args) {
+  const file = args[0];
+  if (!file) { console.error('Which file? Try: notugly tokens tokens.json'); process.exit(2); }
+  const report = auditTokens(JSON.parse(readFileSync(file, 'utf8')), { name: file });
+  console.log(`\n  ${bold(file)}  ${dim(`${report.counted} colours, ${report.greys} grey`)}\n`);
+  for (const f of report.findings.slice(0, 20)) {
+    console.log(`  ${f.level === 'error' ? c(31, '✗') : c(33, '!')} ${f.says}`);
+  }
+  if (!report.findings.length) console.log(`  ${c(32, '✓ nothing to report')}`);
+  console.log(`\n  ${report.passed ? c(32, report.summary) : c(31, report.summary)}\n`);
+  if (!report.passed && has('strict')) process.exit(1);
+}
+
+function cmdStorybook(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const files = { ...toStorybook(sys), 'notugly.css': exportAll(sys).files['notugly.css'] };
+  const out = flag('out', null);
+  if (!out) { console.log(Object.values(files)[0]); return; }
+  mkdirSync(out, { recursive: true });
+  for (const [f, body] of Object.entries(files)) writeFileSync(`${out}/${f}`, body);
+  console.log(`\n  Wrote ${bold(String(Object.keys(files).length))} files to ${bold(out)}`);
+  console.log(`  ${dim('Plain CSF3 — no framework import, so it works in any Storybook.')}\n`);
+}
+
+function cmdTeam(args) {
+  const [org, ...people] = args.filter((a) => !a.startsWith('--'));
+  if (!org || !people.length) { console.error('Try: notugly team acme ada grace linus'); process.exit(2); }
+  const t = team(org, people, { dark: has('dark'), brand: flag('brand', null), style: flag('style', null) });
+  const check = teamDistinct(t);
+
+  console.log(`\n  ${bold(org)}  ${dim(`${people.length} people, all in ${t.style}`)}\n`);
+  for (const m of t.members) {
+    console.log(`  ${swatch(m.colour, 4)} ${bold(m.id.padEnd(14))} ${dim(m.handle.padEnd(16))} ${dim(m.archetype)}`);
+  }
+  console.log(`\n  ${check.passed ? c(32, '✓ no two members look alike') : c(33, `! ${check.clashes.length} pair(s) are close in hue`)}`);
+  const out = flag('out', null);
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    for (const m of t.members) writeFileSync(`${out}/${m.id}.svg`, m.avatar({ size: 256 }));
+    writeFileSync(`${out}/team.svg`, teamSheet(t));
+    console.log(`  Wrote ${bold(String(t.members.length + 1))} files to ${bold(out)}`);
+  }
+  console.log();
+}
+
 // ---------------------------------------------------------------------------
 const cmd = argv[0];
 if (argv.includes('--help') || argv.includes('-h')) usage(0);
@@ -494,6 +820,50 @@ switch (cmd) {
     break;
   case 'vscode':
     cmdTarget(argv.slice(1), 'VS Code theme', toVsCode, 'Drop it in ~/.vscode/extensions and restart.');
+    break;
+  case 'spec':
+    await cmdSpec(argv.slice(1));
+    break;
+  case 'diff':
+    await cmdDiff(argv.slice(1));
+    break;
+  case 'onepager':
+    await cmdOnePager(argv.slice(1));
+    break;
+  case 'cost':
+    await cmdCost(argv.slice(1));
+    break;
+  case 'slides':
+    cmdSlides(argv.slice(1));
+    break;
+  case 'poster':
+  case 'specimen':
+  case 'zine':
+    cmdPaper(argv.slice(1), cmd);
+    break;
+  case 'name':
+    cmdName(argv.slice(1));
+    break;
+  case 'stickers':
+    cmdStickers(argv.slice(1));
+    break;
+  case 'eras':
+    cmdEras(argv.slice(1));
+    break;
+  case 'watch':
+    await cmdWatch(argv.slice(1));
+    break;
+  case 'check':
+    await cmdCheck(argv.slice(1));
+    break;
+  case 'tokens':
+    cmdTokens(argv.slice(1));
+    break;
+  case 'storybook':
+    cmdStorybook(argv.slice(1));
+    break;
+  case 'team':
+    cmdTeam(argv.slice(1));
     break;
   case undefined:
     // No arguments: make something, so the first run shows the product.

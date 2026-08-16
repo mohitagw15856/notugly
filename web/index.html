@@ -27,6 +27,7 @@
     <a href="#avatars">Avatars</a>
     <a href="#personas">Personas</a>
     <a href="#judge">Judge</a>
+    <a href="#room">The room</a>
     <a href="#chaos">Chaos</a>
     <a href="#export">Export</a>
   </div>
@@ -49,6 +50,7 @@
     <button id="reroll" class="btn primary">Reroll</button>
     <button id="mode" class="btn" aria-pressed="false">Dark</button>
     <button id="copylink" class="btn ghost">Copy link</button>
+    <button id="present" class="btn ghost" title="Hide every control. Nobody rerolls your work mid-meeting.">Present</button>
   </div>
 
   <p class="hint" id="hint"></p>
@@ -240,8 +242,81 @@
 </section>
 
 <!-- ---------------------------------------------------------------- -->
+<section id="room" class="reveal">
+  <h2><span class="tag">06</span> Taking it into a room</h2>
+  <p class="lede">
+    Everything above makes a design. This makes the <em>documents about</em> a
+    design — which is a different job, for the people who have to explain it,
+    print it, or defend it in a meeting.
+  </p>
+
+  <div class="roomgrid">
+    <div class="panel">
+      <h3>From a picture</h3>
+      <p class="fine">
+        Drop in a screenshot, a photo, or four images for a mood board. It is
+        pixel arithmetic — nothing is uploaded and no model is called.
+      </p>
+      <label class="drop" id="drop">
+        <input type="file" id="dropfile" accept="image/*" multiple hidden>
+        <span>Drop images here, or click</span>
+      </label>
+      <div id="dropout"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Name the colours</h3>
+      <p class="fine">
+        Nobody has ever said "can we make it less #4f76b6". You can argue about
+        Hydrangea.
+      </p>
+      <div id="namesout"></div>
+    </div>
+
+    <div class="panel">
+      <h3>The decision log</h3>
+      <p class="fine">
+        Every reroll recorded. In six months somebody will ask why it looks like
+        this, and this is the answer.
+      </p>
+      <ol class="log" id="log"></ol>
+      <button id="dllog" class="btn sm">Export the log</button>
+    </div>
+
+    <div class="panel">
+      <h3>The one-pager</h3>
+      <p class="fine">
+        What passes, what does not, and what it costs — on one printable sheet.
+      </p>
+      <div id="opout"></div>
+      <button id="dlop" class="btn sm">Download it</button>
+    </div>
+  </div>
+
+  <h3 class="sub">Things you print</h3>
+  <p class="fine">
+    All three are true-size SVG, pulled into the CMYK gamut first — so what you
+    pin up is what came out of the printer.
+  </p>
+  <div class="papergrid" id="papergrid"></div>
+  <div class="row">
+    <button id="dlposter" class="btn sm">Poster (A3)</button>
+    <button id="dlspecimen" class="btn sm">Specimen (A4)</button>
+    <button id="dlzine" class="btn sm">Zine (foldable)</button>
+    <button id="dlslides" class="btn sm">Deck theme (.thmx)</button>
+  </div>
+
+  <h3 class="sub">The same design, four decades</h3>
+  <p class="fine">
+    Every one of these was, at the time, what modern looked like. So is the last
+    one.
+  </p>
+  <div class="eragrid" id="eragrid"></div>
+</section>
+
+<!-- ---------------------------------------------------------------- -->
 <section id="chaos" class="reveal">
-  <h2><span class="tag">06</span> The chaos test</h2>
+  <h2><span class="tag">07</span> The chaos test</h2>
   <p class="lede">
     Design systems are demonstrated with three words of Latin and a square
     photograph. <em>Real content is not like that.</em> Here is the same system
@@ -253,7 +328,7 @@
 
 <!-- ---------------------------------------------------------------- -->
 <section id="export" class="reveal">
-  <h2><span class="tag">07</span> Take it</h2>
+  <h2><span class="tag">08</span> Take it</h2>
   <p class="lede">Eight formats, including a loadable Figma plugin and a VS Code theme. The byte count is next to each one, because nobody else will tell you.</p>
 
   <div class="tabs" id="export-tabs"></div>
@@ -271,7 +346,7 @@
 
 <!-- ---------------------------------------------------------------- -->
 <section id="gallery" class="reveal">
-  <h2><span class="tag">08</span> Seeds worth stealing</h2>
+  <h2><span class="tag">09</span> Seeds worth stealing</h2>
   <p class="lede">Every design here is a link. Click one and the page becomes it.</p>
   <div class="gallery" id="gallery-grid"></div>
 </section>
@@ -286,7 +361,7 @@
   </p>
   <p class="fine keys">
     <kbd>R</kbd> reroll · <kbd>D</kbd> dark · <kbd>←</kbd><kbd>→</kbd> vibe ·
-    <kbd>E</kbd> export · <kbd>P</kbd> persona · <kbd>?</kbd> this list
+    <kbd>E</kbd> export · <kbd>P</kbd> persona · <kbd>S</kbd> present · <kbd>?</kbd> this list
   </p>
 </footer>
 

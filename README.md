@@ -241,6 +241,160 @@ primaries, so it can tell you what your colour becomes on paper.
 
 <br>
 
+## Taking it into a room
+
+Everything above makes a design. This makes the **documents about** a design —
+a different job, for the people who have to explain it, print it, or defend it.
+
+```console
+$ npx notugly diff stripe.com linear.app
+
+                    stripe.com        linear.app
+  Colours           16                16               —
+  Greys             4                 7                stripe.com by 3
+  Typefaces         5                 1                linear.app by 4
+  Type sizes        10                8                linear.app by 2
+  Corner radii      5                 5                —
+  Unreadable pairs  5                 12               stripe.com by 7
+
+  Type scale consistent: stripe.com yes · linear.app no
+```
+
+That's a real run, not an illustration. It replaces "theirs feels more premium"
+with sentences nobody can argue with — and note that neither site wins
+everything, which is usually the honest answer.
+
+It does not tell you which is *better*. That is not a thing a program knows.
+
+> It reads the stylesheets it can fetch, so it sees what a browser sees on first
+> load and not what JavaScript adds later. A partial sample, honestly labelled,
+> beats a confident guess.
+
+| | |
+|---|---|
+| `notugly spec <url>` | What that design is made of, as a table you can paste into a doc. |
+| `notugly onepager` | One printable sheet: what fails, and whether each fix is a find-and-replace or a decision somebody has to sign off. |
+| `notugly cost <url>` | Kilobytes of webfont and hours of work. Counts measured, hours estimated — and it says which is which. |
+| `notugly slides` | A real `.thmx` for PowerPoint and Keynote, plus a Google Slides guide. |
+| `notugly watch <url>` | What changed since last time. |
+
+**A decision log.** The website records every reroll and vibe change and exports
+it as *"here is why it looks like this"*. Six months later somebody will ask.
+
+**Present mode.** Hides every control so nobody leans over and rerolls your work
+mid-meeting. `S`, or the button.
+
+<br>
+
+## The deck theme is the one nobody else ships
+
+PowerPoint hands `accent1`–`accent6` to chart series in order, so **every** pair
+has to be distinguishable — not just neighbours. Hue is not enough: a
+colour-blind viewer loses hue and a greyscale printout loses it entirely.
+
+So the six are a lightness ladder with the hue rotating underneath. Different in
+colour for most people, different in tone for everyone. There's a test that
+fails the build if any pair in any vibe drops below 1.2:1.
+
+<br>
+
+## Things you print
+
+```console
+npx notugly poster --out wall.svg      # A3, gamut-checked
+npx notugly specimen --out type.svg    # a proper specimen sheet
+npx notugly zine --out fold.svg        # 8 pages, one sheet, one cut
+```
+
+True-size SVG in millimetres, with every colour pulled into the CMYK gamut
+first — so what you pin up is what came out of the printer.
+
+The zine imposition is the fiddly bit: fold a sheet into eighths and the pages
+do not land in reading order, and half of them are upside down. The layout is
+the real one, with the cut line marked.
+
+<br>
+
+## From a picture
+
+Drop in a photograph, a screenshot, or four images for a mood board, and get the
+system they imply.
+
+It is pixel arithmetic — deterministic k-means in OKLab. **Nothing is uploaded
+and no model is called**, which also means the same image always gives the same
+palette. A palette that changes every time you press the button is not a
+palette, it's a slot machine.
+
+<details>
+<summary><b>The bug that made this worth writing up</b></summary>
+
+<br>
+
+Merging near-identical colours by **contrast ratio** seems obviously right and is
+completely wrong. Contrast is luminance only, and a sunset orange and a teal sit
+within 1.1:1 of each other — so a contrast-based merge silently ate the accent
+colour and handed back a palette of browns.
+
+It asks OKLab how different they *look* now. There's a test.
+
+</details>
+
+<br>
+
+## Colour names
+
+```console
+$ npx notugly name "#4f76b6" "#e4002b" "#8a8577"
+
+  #4f76b6   Hydrangea    close match
+  #e4002b   Cherry       nearest
+  #8a8577   Mushroom     close match
+```
+
+Nobody has ever said "can we make it a bit less `#4f76b6`". You can argue about
+Hydrangea. Names are unique within a palette, and it tells you when a name is a
+stretch rather than pretending.
+
+<br>
+
+## Four decades
+
+```console
+npx notugly eras
+```
+
+The same seed as 1998, 2008, 2015 and now — bevels, then gloss, then flat, then
+whatever we're doing. Every one of them was, at the time, what modern looked
+like. So is the last one.
+
+Contrast is still enforced in every era. The period joke does not get to ship an
+unreadable artefact.
+
+<br>
+
+## Keeping it
+
+```yaml
+- uses: mohitagw15856/notugly@main
+  with:
+    url: ${{ steps.deploy.outputs.url }}
+    baseline: design-baseline.json
+```
+
+Design systems fail one exception at a time — a slightly different grey for a
+banner, a one-off radius on a modal. Individually every one is reasonable.
+Eighteen months later nobody can tell you what the brand colour is.
+
+`notugly watch` commits a baseline next to your code and tells you what drifted,
+distinguishing *"a new colour"* from *"a colour 0.003 away from one you already
+had, because somebody could not find the token"*.
+
+`notugly tokens` reads the other direction — point it at a W3C token file or a
+Figma variables export and it names the failing pairs: `color.text.danger on
+surface.default is 2.99:1 — needs 4.5`.
+
+<br>
+
 ## Bring your own brand
 
 The commonest and most reasonable objection to any generator is *"this is lovely
@@ -390,6 +544,8 @@ import { system, audit } from 'notugly';
 import { avatar } from 'notugly/avatar';
 import { persona, card } from 'notugly/persona';
 import { fixContrast } from 'notugly/fix';
+import { name } from 'notugly/names';
+import { paletteFromImage } from 'notugly/quantise';
 
 const ui = system('my-app', { vibe: 'playful', brand: '#e4002b' });
 audit(ui).passed;                       // true. if it's false, that's my bug
@@ -399,6 +555,8 @@ avatar('mo', { on: ui.colour.bg,        // never invisible
 
 card(persona('mo'));                    // a 1200×630 social card, self-contained
 fixContrast('#8ab4f8', '#ffffff');      // → #4f76b6, same hue, now readable
+name('#4f76b6').name;                   // 'Hydrangea'
+paletteFromImage(imageData);            // pixel maths, no upload, no model
 ```
 
 Same seed, same design, forever. Which means a design is a URL you can send

@@ -1,0 +1,28 @@
+# notugly checking its own deployed site with its own action.
+#
+# Dogfooding, but also the honest test: if the action cannot keep this repo's
+# own site tidy, it has no business in anybody else's pipeline.
+name: design
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, because drift is a slow problem and a daily run just makes noise.
+    - cron: '0 9 * * 1'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Contrast and consistency
+        run: node bin/notugly.mjs check https://mohitagw15856.github.io/notugly
+
+      - name: Drift since the committed baseline
+        run: node bin/notugly.mjs watch https://mohitagw15856.github.io/notugly design-baseline.json

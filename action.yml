@@ -1,0 +1,48 @@
+name: notugly
+description: Fail the build when a design regresses — contrast, grey sprawl, or a typeface nobody agreed to.
+author: Mohit (mohitagw15856)
+
+branding:
+  icon: eye
+  color: purple
+
+inputs:
+  url:
+    description: The site or token file to check. A deployed preview URL works well.
+    required: true
+  max-greys:
+    description: How many greys before it counts as sprawl.
+    required: false
+    default: '8'
+  max-fonts:
+    description: How many typefaces before it counts as an accident.
+    required: false
+    default: '3'
+  baseline:
+    description: Optional path to a committed notugly baseline. If set, drift is reported too.
+    required: false
+    default: ''
+  strict-drift:
+    description: Fail on drift, not just on contrast.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    # No install step: notugly has no dependencies, so npx fetches one package
+    # and nothing else. That is the whole reason this can be a composite action
+    # rather than a Docker one.
+    - name: Check contrast and consistency
+      shell: bash
+      run: |
+        npx --yes notugly check "${{ inputs.url }}" \
+          --max-greys "${{ inputs.max-greys }}" \
+          --max-fonts "${{ inputs.max-fonts }}"
+
+    - name: Check for design drift
+      if: inputs.baseline != ''
+      shell: bash
+      run: |
+        npx --yes notugly watch "${{ inputs.url }}" "${{ inputs.baseline }}" \
+          ${{ inputs.strict-drift == 'true' && '--strict' || '' }}

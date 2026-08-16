@@ -7,7 +7,6 @@ import { avatar, describe, STYLES, paletteFor } from '../lib/avatar.mjs';
 import { system, audit } from '../lib/system.mjs';
 import { VIBE_NAMES } from '../lib/vibe.mjs';
 import { exportAll, toCss, toTailwind, toJson } from '../lib/export.mjs';
-import { extractFromCss, summarise } from '../lib/extract.mjs';
 import { staticChecks, CASES } from '../lib/chaos.mjs';
 import { gradient } from '../lib/gradient.mjs';
 import { shadow, allShadows, allElevationSurfaces, elevationSurface, LEVELS } from '../lib/shadow.mjs';
@@ -24,6 +23,18 @@ import { roast } from '../lib/roast.mjs';
 import { persona, cast, card, identityKit, handle, displayName, ARCHETYPES } from '../lib/persona.mjs';
 import { mascot, MASCOT_STATES, reactTo, quip } from '../lib/mascot.mjs';
 import { toFigma, toVsCode } from '../lib/targets.mjs';
+import { name as nameColour, nameAll, nearestName } from '../lib/names.mjs';
+import { quantise, paletteFromImage, paletteFromImages, perceptualDistance } from '../lib/quantise.mjs';
+import { specSheet, specMarkdown, compare, onePager, onePagerHtml, costOf } from '../lib/spec.mjs';
+import { zip } from '../lib/zip.mjs';
+import { toThmx, toSlidesGuide, toSlidesJson, chartAccents, chartLegibility, officeColours } from '../lib/slides.mjs';
+import { poster, specimen, zine, printWarnings, PAPER } from '../lib/paper.mjs';
+import { ERAS, inEra, allEras, eraCard } from '../lib/era.mjs';
+import { snapshot, drift, driftText } from '../lib/drift.mjs';
+import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
+import { readTokens, auditTokens, toStorybook } from '../lib/ingest.mjs';
+import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
+import { extractFromCss, summarise } from '../lib/extract.mjs';
 
 let pass = 0;
 const fails = [];
@@ -850,6 +861,378 @@ t('the elevation scale survives every export format', () => {
   const tw = toTailwind(sys);
   const config = JSON.parse(tw.slice(tw.indexOf('export default') + 14, tw.lastIndexOf(';')));
   for (const l of LEVELS) ok(config.theme.extend.boxShadow[l], `tailwind is missing boxShadow.${l}`);
+});
+
+
+
+// --- colour names -------------------------------------------------------------
+
+t('a colour gets the same name every time', () => {
+  for (const hex of ['#4f76b6', '#e4002b', '#8a8577']) eq(nameColour(hex).name, nameColour(hex).name);
+});
+
+t('names are unique within one palette', () => {
+  // Two roles both called "Slate" in one table reads as a bug in the tool.
+  const names = nameAll(['#5a6672', '#5a6673', '#5a6674', '#5b6773']).map((n) => n.name);
+  eq(new Set(names).size, names.length, `collided: ${names.join(', ')}`);
+});
+
+t('a name is honest about how close it is', () => {
+  // An exact anchor should claim to be exact; something between two anchors
+  // should not.
+  ok(nameColour('#5478b8').exact, 'an exact anchor did not report as exact');
+  eq(nearestName('#5478b8').name, 'Hydrangea');
+});
+
+t('near-greys are named as greys, not as a hue they barely have', () => {
+  for (const hex of ['#f7f7f7', '#808080', '#1a1a1a']) ok(nameColour(hex).grey, `${hex} was given a hue name`);
+});
+
+// --- image to palette ---------------------------------------------------------
+
+const testImage = (regions) => {
+  const W = 120, H = 120;
+  const data = new Uint8ClampedArray(W * H * 4);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      // Last match wins, so a later region paints *over* an earlier one.
+      // Taking the first match meant a full-canvas background always won and
+      // the accent under test was never drawn at all.
+      const hit = [...regions].reverse().find((r) => x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1) ?? regions[0];
+      data[i] = hit.rgb[0]; data[i + 1] = hit.rgb[1]; data[i + 2] = hit.rgb[2]; data[i + 3] = 255;
+    }
+  }
+  return { data, width: W, height: H };
+};
+
+t('the same image always gives the same palette', () => {
+  const img = testImage([{ x0: 0, y0: 0, x1: 120, y1: 120, rgb: [240, 120, 40] }, { x0: 0, y0: 80, x1: 120, y1: 120, rgb: [40, 60, 90] }]);
+  eq(JSON.stringify(paletteFromImage(img)), JSON.stringify(paletteFromImage(img)), 'a palette that changes per run is a slot machine');
+});
+
+t('a small accent survives a large background', () => {
+  // The bug this catches: merging near-duplicates by contrast ratio rather than
+  // perceptual distance. A teal accent and an orange sky sit within 1.1:1 of
+  // each other in luminance, so a contrast-based merge silently eats the accent.
+  const img = testImage([
+    { x0: 0, y0: 0, x1: 120, y1: 120, rgb: [240, 120, 40] },
+    { x0: 90, y0: 30, x1: 120, y1: 60, rgb: [30, 160, 170] },
+  ]);
+  const p = paletteFromImage(img);
+  ok(p.colours.some((c) => hexToOklch(c.hex)[2] > 180 && hexToOklch(c.hex)[2] < 260), `accent lost: ${p.colours.map((c) => c.hex).join(', ')}`);
+});
+
+t('perceptual distance disagrees with contrast, which is the point', () => {
+  // These two are near-identical in luminance and nothing alike to look at.
+  ok(contrast('#f07828', '#1ea0aa') < 1.2, 'test premise: these should have similar luminance');
+  ok(perceptualDistance('#f07828', '#1ea0aa') > 0.2, 'perceptual distance failed to separate them');
+});
+
+t('a mood board weights every image equally', () => {
+  const big = testImage([{ x0: 0, y0: 0, x1: 120, y1: 120, rgb: [200, 40, 40] }]);
+  const small = testImage([{ x0: 0, y0: 0, x1: 120, y1: 120, rgb: [40, 40, 200] }]);
+  const board = paletteFromImages([big, small]);
+  eq(board.colours.length, 2, 'one image drowned out the other');
+});
+
+// --- zip ----------------------------------------------------------------------
+
+t('the zip writer produces a byte-identical archive every run', () => {
+  const a = zip([{ name: 'a.txt', data: 'hello' }]);
+  const b = zip([{ name: 'a.txt', data: 'hello' }]);
+  eq([...a].join(','), [...b].join(','), 'the archive changes between runs');
+});
+
+t('the zip has the signatures a reader looks for', () => {
+  const z = zip([{ name: 'x', data: 'y' }]);
+  eq([z[0], z[1], z[2], z[3]].join(','), '80,75,3,4', 'wrong local file header');
+  // End-of-central-directory, last 22 bytes.
+  const end = z.slice(z.length - 22);
+  eq([end[0], end[1], end[2], end[3]].join(','), '80,75,5,6', 'wrong end-of-central-directory');
+});
+
+// --- deck themes --------------------------------------------------------------
+
+t('all six chart accents are distinguishable, in every vibe and mode', () => {
+  // PowerPoint assigns accent1..6 to chart series in order, so *every* pair has
+  // to differ — not just neighbours. Hand-picking ramp indices put accent1 and
+  // accent5 within 1.05:1 in all ten combinations.
+  for (const v of VIBE_NAMES) {
+    for (const dark of [false, true]) {
+      const r = chartLegibility(system('chart', { vibe: v, dark }));
+      ok(r.passed, `${v}${dark ? ' dark' : ''}: ${JSON.stringify(r.problems)}`);
+    }
+  }
+});
+
+t('chart accents stay visible against the slide background', () => {
+  for (const v of VIBE_NAMES) {
+    for (const dark of [false, true]) {
+      const sys = system('chart', { vibe: v, dark });
+      for (const a of Object.values(chartAccents(sys))) {
+        ok(contrast(a, sys.colour.bg) >= 1.3, `${a} is invisible on ${sys.colour.bg} in ${v}`);
+      }
+    }
+  }
+});
+
+t('the theme file is a real archive with the parts Office expects', () => {
+  const bytes = toThmx(system('deck'));
+  const text = new TextDecoder().decode(bytes);
+  for (const part of ['[Content_Types].xml', '_rels/.rels', 'theme/theme/theme1.xml']) {
+    ok(text.includes(part), `missing ${part}`);
+  }
+  ok(text.includes('<a:clrScheme'), 'no colour scheme in the theme');
+});
+
+t('Office colours are bare six-digit hex, without the hash', () => {
+  // srgbClr val="#FF0000" is silently ignored by Office. It has to be FF0000.
+  const text = new TextDecoder().decode(toThmx(system('deck')));
+  ok(!/val="#/.test(text), 'a hash leaked into an Office colour value');
+  eq((text.match(/<a:srgbClr val="[0-9A-F]{6}"\/>/g) || []).length >= 8, true);
+});
+
+// --- print artefacts ----------------------------------------------------------
+
+t('print artefacts are real paper sizes, in millimetres', () => {
+  const sys = system('paper');
+  for (const [make, size] of [[poster, 'A3'], [specimen, 'A4']]) {
+    const svg = make(sys, { size });
+    const [w, h] = PAPER[size];
+    ok(svg.includes(`width="${w}mm"`), `${size} width is wrong`);
+    ok(svg.includes(`height="${h}mm"`), `${size} height is wrong`);
+  }
+});
+
+t('nothing on a printed sheet runs off the edge', () => {
+  // A specimen that clips its own pangram is worse than one set a point
+  // smaller, so `line()` shrinks to fit. This checks it actually does.
+  const sys = system('paper');
+  const [w] = PAPER.A4;
+  const svg = specimen(sys, { size: 'A4' });
+  for (const m of svg.matchAll(/<text x="([\d.]+)"([^>]*)>([^<]*)</g)) {
+    const [, x, attrs, text] = m;
+    // Right-anchored labels grow leftward from x, so measuring them as if they
+    // were left-anchored reports an overflow that is not there.
+    if (attrs.includes('text-anchor="end"')) continue;
+    const size = Number((attrs.match(/font-size="([\d.]+)"/) || [])[1] ?? 0);
+    const width = [...text].length * size * 0.55;
+    ok(Number(x) + width < w * 1.02, `"${text.slice(0, 24)}" at ${size}mm overflows the sheet`);
+  }
+});
+
+t('print artefacts only use colours a press can reach', () => {
+  const sys = system('paper', { vibe: 'playful' });
+  for (const svg of [poster(sys), specimen(sys)]) {
+    for (const m of svg.matchAll(/fill="(#[0-9a-f]{6})"/g)) {
+      ok(printShift(m[1]).inGamut, `${m[1]} is out of gamut on a printed artefact`);
+    }
+  }
+});
+
+t('the zine imposes eight pages with each one used once', () => {
+  const svg = zine(system('z'), Array.from({ length: 8 }, (_, i) => ({ title: `p${i + 1}`, body: '' })));
+  for (let i = 1; i <= 8; i++) ok(svg.includes(`>${i}</text>`), `page ${i} is missing from the imposition`);
+  // Half the sheet prints upside down, which is what makes the fold work.
+  eq((svg.match(/rotate\(180\)/g) || []).length, 4, 'wrong number of rotated pages');
+});
+
+// --- eras ---------------------------------------------------------------------
+
+t('every era is still readable, including 1998', () => {
+  // The period joke does not get to ship an unreadable artefact.
+  for (const v of VIBE_NAMES) {
+    for (const r of allEras(system('era', { vibe: v }))) {
+      const c = r.colour;
+      for (const [what, fg, bg] of [
+        ['text', c.text, c.bg],
+        ['button label', c.buttonText, c.buttonBg],
+        ['link', c.link, c.bg],
+        ['brand', c.brand, c.bg],
+      ]) {
+        ok(contrast(fg, bg) >= 4.5, `${v} ${r.era.year} ${what}: ${contrast(fg, bg).toFixed(2)}:1`);
+      }
+    }
+  }
+});
+
+t('the eras are actually different from each other', () => {
+  const cards = allEras(system('era')).map((r) => eraCard(r));
+  eq(new Set(cards).size, ERAS.length, 'two eras rendered identically');
+});
+
+// --- drift --------------------------------------------------------------------
+
+t('a snapshot of an unchanged design shows no drift', () => {
+  const dna = { url: 'x', colours: ['#ffffff', '#111111'], fonts: ['Inter'], radii: ['4px'], fontSizes: ['16'], shadows: [] };
+  const a = snapshot(dna, { at: 'then' });
+  const b = snapshot(dna, { at: 'now' });
+  eq(drift(a, b).drifted, false);
+  eq(drift(a, b).level, 'clean');
+});
+
+t('a near-duplicate colour is reported differently from a new one', () => {
+  const base = snapshot({ colours: ['#ffffff', '#2b6cb0'], fonts: [], radii: [], fontSizes: [], shadows: [] }, { at: '1' });
+  const twin = snapshot({ colours: ['#ffffff', '#2b6cb0', '#2b6cb2'], fonts: [], radii: [], fontSizes: [], shadows: [] }, { at: '2' });
+  const fresh = snapshot({ colours: ['#ffffff', '#2b6cb0', '#c8102e'], fonts: [], radii: [], fontSizes: [], shadows: [] }, { at: '2' });
+
+  eq(drift(base, twin).findings[0].kind, 'near-duplicate');
+  eq(drift(base, fresh).findings[0].kind, 'new-colour');
+});
+
+t('a legitimate card-on-page pair is not called a duplicate', () => {
+  // #f4f4f4 on #ffffff is a surface, not somebody failing to find a token.
+  const base = snapshot({ colours: ['#ffffff'], fonts: [], radii: [], fontSizes: [], shadows: [] }, { at: '1' });
+  const after = snapshot({ colours: ['#ffffff', '#f4f4f4'], fonts: [], radii: [], fontSizes: [], shadows: [] }, { at: '2' });
+  eq(drift(base, after).findings[0].kind, 'new-colour');
+});
+
+t('a snapshot is stable against stylesheet reordering', () => {
+  const a = snapshot({ colours: ['#111111', '#ffffff'], fonts: ['B', 'A'], radii: ['8px', '4px'], fontSizes: ['20', '16'], shadows: [] });
+  const b = snapshot({ colours: ['#ffffff', '#111111'], fonts: ['A', 'B'], radii: ['4px', '8px'], fontSizes: ['16', '20'], shadows: [] });
+  eq(JSON.stringify(a), JSON.stringify(b), 'a reordered stylesheet produced a different baseline');
+});
+
+// --- teams --------------------------------------------------------------------
+
+t('no two people on a team look alike', () => {
+  for (const size of [2, 4, 6, 10]) {
+    const t = team('acme', Array.from({ length: size }, (_, i) => `person${i}`));
+    ok(teamDistinct(t).passed, `${size} people: ${JSON.stringify(teamDistinct(t).clashes)}`);
+  }
+});
+
+t('a team shares one style, so the page reads as one organisation', () => {
+  const t = team('acme', ['a', 'b', 'c', 'd']);
+  const styles = new Set(t.members.map((m) => m.avatar().match(/aria-label="([^"]*)"/)?.[1]));
+  eq(t.members.length, 4);
+  ok(STYLES.includes(t.style), `${t.style} is not a real style`);
+});
+
+t('a team spreads its archetypes instead of landing three Menaces', () => {
+  const t = team('acme', ['a', 'b', 'c', 'd', 'e', 'f']);
+  eq(new Set(t.members.map((m) => m.archetype)).size, 6, 'archetypes collided');
+});
+
+t('the same person at two companies gets two faces', () => {
+  const a = team('acme', ['sam']).members[0].avatar();
+  const b = team('globex', ['sam']).members[0].avatar();
+  ok(a !== b, 'a team identity leaked between organisations');
+});
+
+// --- reading somebody else's tokens ------------------------------------------
+
+t('W3C, Figma and flat token shapes all parse', () => {
+  eq(readTokens({ colour: { brand: { $value: '#2b6cb0', $type: 'color' } } })[0].hex, '#2b6cb0');
+  eq(readTokens({ brand: { type: 'COLOR', valuesByMode: { light: { r: 1, g: 0, b: 0 } } } })[0].hex, '#ff0000');
+  eq(readTokens({ brand: '#2b6cb0' })[0].hex, '#2b6cb0');
+  // Short hex and hex with alpha both normalise to six digits.
+  eq(readTokens({ a: '#f00' })[0].hex, '#ff0000');
+  eq(readTokens({ a: '#2b6cb0ff' })[0].hex, '#2b6cb0');
+});
+
+t('a token path is kept, because it says what the colour is for', () => {
+  const tokens = readTokens({ colour: { text: { danger: { $value: '#e57373' } } } });
+  eq(tokens[0].path, 'colour.text.danger');
+});
+
+t('a failing semantic pair is reported with both names', () => {
+  const report = auditTokens({
+    color: { text: { danger: { $value: '#e57373' } } },
+    surface: { default: { $value: '#ffffff' } },
+  });
+  eq(report.passed, false);
+  ok(report.findings[0].says.includes('color.text.danger'), 'the finding did not name the token');
+  ok(report.findings[0].says.includes('surface.default'), 'the finding did not name the surface');
+});
+
+t('notugly own exports survive its own token audit', () => {
+  const tokens = JSON.parse(toJson(system('self')));
+  const report = auditTokens(tokens, { name: 'self' });
+  ok(report.counted > 0, 'could not read its own tokens back');
+});
+
+// --- storybook ----------------------------------------------------------------
+
+t('the storybook file is CSF3 with no framework import', () => {
+  const story = toStorybook(system('sb'))['notugly.stories.js'];
+  ok(story.includes('export default'), 'no default export');
+  ok(!/from ['"]react|from ['"]vue|from ['"]@storybook/.test(story), 'it imported a framework');
+  for (const name of ['Colour', 'Type', 'Elevation', 'Button']) {
+    ok(story.includes(`export const ${name}`), `missing the ${name} story`);
+  }
+});
+
+// --- stickers -----------------------------------------------------------------
+
+t('every sticker motion animates and stays self-contained', () => {
+  const p = persona('sticker-test');
+  for (const motion of STICKER_MOTIONS) {
+    const svg = sticker(p, { motion });
+    ok(svg.includes('<animateTransform'), `${motion} does not animate`);
+    // SMIL rather than CSS: chat clients strip <style> and keep <animate>.
+    ok(!svg.includes('<style'), `${motion} used a style block, which gets sanitised away`);
+    ok(!/<script|href=|xlink:/.test(svg), `${motion} reaches outside itself`);
+  }
+  eq(Object.keys(stickerPack(p)).length, STICKER_MOTIONS.length);
+});
+
+// --- the PM artefacts ---------------------------------------------------------
+
+const messyDna = () => {
+  const css =
+    'body{background:#fff;color:#333;font-family:Inter,sans-serif}h1{font-size:48px;font-family:Georgia}' +
+    '.a{font-size:32px}.c{font-size:16px}.btn{background:#8ab4f8;color:#fff;border-radius:6px}' +
+    '.x{color:#f8f8f8}.q{color:#cccccc;font-family:Roboto}.r{border-radius:11px}.s{border-radius:3px}';
+  const dna = { url: 'messy.example', ...extractFromCss(css) };
+  dna.summary = summarise(dna);
+  return dna;
+};
+
+t('a spec sheet reports what it can measure and says what it cannot', () => {
+  const spec = specSheet(messyDna());
+  ok(spec.palette.length > 0);
+  ok(spec.type.families.includes('Inter'));
+  ok(!spec.type.consistent, 'these sizes have no common ratio and it should say so');
+  ok(spec.type.note.includes('one at a time'));
+});
+
+t('an unreadable colour is not excused because its role was guessed', () => {
+  // The stylesheet does not say which property a colour came from. Restricting
+  // failures to colours inferred to be text silently drops real findings.
+  const spec = specSheet(messyDna());
+  ok(spec.failing.some((f) => f.hex === '#8ab4f8'), 'a failing colour was filtered out by role inference');
+});
+
+t('a comparison reports counts, not a winner', () => {
+  const cmp = compare(messyDna(), messyDna(), { labels: ['a', 'b'] });
+  ok(cmp.rows.every((r) => r.winner === null), 'identical designs produced a winner');
+});
+
+t('the one-pager grades each pairing against its own job', () => {
+  // Grading a border as body text is how you report that a design which passes
+  // its own audit has three failures.
+  for (const v of VIBE_NAMES) {
+    for (const dark of [false, true]) {
+      const page = onePager(system('op', { vibe: v, dark }));
+      eq(page.failing.length, 0, `${v}${dark ? ' dark' : ''}: ${JSON.stringify(page.failing.map((f) => [f.label, f.ratio]))}`);
+    }
+  }
+});
+
+t('the one-pager prints to a self-contained page', () => {
+  const html = onePagerHtml(onePager(system('op')));
+  ok(html.includes('@page'), 'no print rules');
+  ok(!/<script|src="http|href="http/.test(html), 'the page reaches outside itself');
+});
+
+t('cost counts what it measured and labels what it estimated', () => {
+  const cost = costOf(specSheet(messyDna()));
+  eq(cost.weight.webfonts, 2, 'Inter and Roboto are webfonts; Georgia is not');
+  ok(cost.weight.names.includes('Inter') && cost.weight.names.includes('Roboto'));
+  ok(!cost.weight.names.includes('Georgia'), 'Georgia was counted as a webfont');
+  ok(cost.basis.includes('estimates'), 'the estimate did not say it was one');
 });
 
 // ---------------------------------------------------------------------------
