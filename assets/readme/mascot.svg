@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="626" height="96" viewBox="0 0 626 96" role="img" aria-label="The notugly mascot in six moods"><g transform="translate(0 0) scale(0.96)">
+  <g id="m0-body">
+    <ellipse cx="50" cy="88" rx="26" ry="5" fill="#030305" opacity=".12"/>
+    <circle cx="50" cy="50" r="34" fill="#f3f5f9" stroke="#bdc1cc" stroke-width="2"/>
+    <path d="M22 34 q28 -20 56 0 q-28 -9 -56 0z" fill="#030305" opacity=".9"/>
+    <g id="m0-brows" transform="translate(0 0)" stroke="#030305" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <path d="M31 39 q6 -3 12 -1"/>
+      <path d="M57 38 q6 -2 12 1"/>
+    </g>
+    <g id="m0-eyes">
+      <circle cx="38" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <circle cx="62" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <g id="m0-pupils">
+        <circle cx="38" cy="50" r="3.4" fill="#030305"/>
+        <circle cx="62" cy="50" r="3.4" fill="#030305"/>
+      </g>
+      <g id="m0-lids" fill="#f3f5f9" style="transform-origin:50px 50px">
+        <rect x="30" y="29" width="16" height="14" rx="2"/>
+        <rect x="54" y="29" width="16" height="14" rx="2"/>
+      </g>
+    </g>
+    <g fill="none" stroke="#28079d" stroke-width="2.6">
+           <circle cx="38" cy="50" r="11"/><circle cx="62" cy="50" r="11"/>
+           <path d="M49 50 h2"/><path d="M27 48 l-5 -3"/><path d="M73 48 l5 -3"/>
+         </g>
+    <ellipse cx="26" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <ellipse cx="74" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <path id="m0-mouth" d="M40 66 q10 8 20 0" fill="none" stroke="#030305" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</g><g transform="translate(106 0) scale(0.96)">
+  <g id="m1-body">
+    <ellipse cx="50" cy="88" rx="26" ry="5" fill="#030305" opacity=".12"/>
+    <circle cx="50" cy="50" r="34" fill="#f3f5f9" stroke="#bdc1cc" stroke-width="2"/>
+    <path d="M22 34 q28 -20 56 0 q-28 -9 -56 0z" fill="#030305" opacity=".9"/>
+    <g id="m1-brows" transform="translate(0 -3)" stroke="#030305" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <path d="M31 39 q6 -3 12 -1"/>
+      <path d="M57 38 q6 -2 12 1"/>
+    </g>
+    <g id="m1-eyes">
+      <circle cx="38" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <circle cx="62" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <g id="m1-pupils">
+        <circle cx="38" cy="50" r="3.4" fill="#030305"/>
+        <circle cx="62" cy="50" r="3.4" fill="#030305"/>
+      </g>
+      <g id="m1-lids" fill="#f3f5f9" style="transform-origin:50px 50px">
+        <rect x="30" y="32.5" width="16" height="14" rx="2"/>
+        <rect x="54" y="32.5" width="16" height="14" rx="2"/>
+      </g>
+    </g>
+    <g fill="none" stroke="#28079d" stroke-width="2.6">
+           <circle cx="38" cy="50" r="11"/><circle cx="62" cy="50" r="11"/>
+           <path d="M49 50 h2"/><path d="M27 48 l-5 -3"/><path d="M73 48 l5 -3"/>
+         </g>
+    <ellipse cx="26" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <ellipse cx="74" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <path id="m1-mouth" d="M38 64 q12 14 24 0" fill="none" stroke="#030305" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</g><g transform="translate(212 0) scale(0.96)">
+  <g id="m2-body">
+    <ellipse cx="50" cy="88" rx="26" ry="5" fill="#030305" opacity=".12"/>
+    <circle cx="50" cy="50" r="34" fill="#f3f5f9" stroke="#bdc1cc" stroke-width="2"/>
+    <path d="M22 34 q28 -20 56 0 q-28 -9 -56 0z" fill="#030305" opacity=".9"/>
+    <g id="m2-brows" transform="translate(0 -6)" stroke="#030305" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <path d="M31 39 q6 -3 12 -1"/>
+      <path d="M57 38 q6 -2 12 1"/>
+    </g>
+    <g id="m2-eyes">
+      <circle cx="38" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <circle cx="62" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <g id="m2-pupils">
+        <circle cx="38" cy="50" r="3.4" fill="#030305"/>
+        <circle cx="62" cy="50" r="3.4" fill="#030305"/>
+      </g>
+      <g id="m2-lids" fill="#f3f5f9" style="transform-origin:50px 50px">
+        <rect x="30" y="33.9" width="16" height="14" rx="2"/>
+        <rect x="54" y="33.9" width="16" height="14" rx="2"/>
+      </g>
+    </g>
+    <g fill="none" stroke="#28079d" stroke-width="2.6">
+           <circle cx="38" cy="50" r="11"/><circle cx="62" cy="50" r="11"/>
+           <path d="M49 50 h2"/><path d="M27 48 l-5 -3"/><path d="M73 48 l5 -3"/>
+         </g>
+    <ellipse cx="26" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <ellipse cx="74" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <path id="m2-mouth" d="M42 68 q10 -3 18 -5" fill="none" stroke="#030305" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</g><g transform="translate(318 0) scale(0.96)">
+  <g id="m3-body">
+    <ellipse cx="50" cy="88" rx="26" ry="5" fill="#030305" opacity=".12"/>
+    <circle cx="50" cy="50" r="34" fill="#f3f5f9" stroke="#bdc1cc" stroke-width="2"/>
+    <path d="M22 34 q28 -20 56 0 q-28 -9 -56 0z" fill="#030305" opacity=".9"/>
+    <g id="m3-brows" transform="translate(0 -9)" stroke="#030305" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <path d="M31 39 q6 -3 12 -1"/>
+      <path d="M57 38 q6 -2 12 1"/>
+    </g>
+    <g id="m3-eyes">
+      <circle cx="38" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <circle cx="62" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <g id="m3-pupils">
+        <circle cx="38" cy="50" r="3.4" fill="#030305"/>
+        <circle cx="62" cy="50" r="3.4" fill="#030305"/>
+      </g>
+      <g id="m3-lids" fill="#f3f5f9" style="transform-origin:50px 50px">
+        <rect x="30" y="29" width="16" height="14" rx="2"/>
+        <rect x="54" y="29" width="16" height="14" rx="2"/>
+      </g>
+    </g>
+    <g fill="none" stroke="#28079d" stroke-width="2.6">
+           <circle cx="38" cy="50" r="11"/><circle cx="62" cy="50" r="11"/>
+           <path d="M49 50 h2"/><path d="M27 48 l-5 -3"/><path d="M73 48 l5 -3"/>
+         </g>
+    <ellipse cx="26" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <ellipse cx="74" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <path id="m3-mouth" d="M45 64 q5 12 10 0 q-5 -6 -10 0" fill="none" stroke="#030305" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</g><g transform="translate(424 0) scale(0.96)">
+  <g id="m4-body">
+    <ellipse cx="50" cy="88" rx="26" ry="5" fill="#030305" opacity=".12"/>
+    <circle cx="50" cy="50" r="34" fill="#f3f5f9" stroke="#bdc1cc" stroke-width="2"/>
+    <path d="M22 34 q28 -20 56 0 q-28 -9 -56 0z" fill="#030305" opacity=".9"/>
+    <g id="m4-brows" transform="translate(0 5)" stroke="#030305" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <path d="M31 39 q6 -3 12 -1"/>
+      <path d="M57 38 q6 -2 12 1"/>
+    </g>
+    <g id="m4-eyes">
+      <circle cx="38" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <circle cx="62" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <g id="m4-pupils">
+        <circle cx="38" cy="50" r="3.4" fill="#030305"/>
+        <circle cx="62" cy="50" r="3.4" fill="#030305"/>
+      </g>
+      <g id="m4-lids" fill="#f3f5f9" style="transform-origin:50px 50px">
+        <rect x="30" y="30.4" width="16" height="14" rx="2"/>
+        <rect x="54" y="30.4" width="16" height="14" rx="2"/>
+      </g>
+    </g>
+    <g fill="none" stroke="#28079d" stroke-width="2.6">
+           <circle cx="38" cy="50" r="11"/><circle cx="62" cy="50" r="11"/>
+           <path d="M49 50 h2"/><path d="M27 48 l-5 -3"/><path d="M73 48 l5 -3"/>
+         </g>
+    <ellipse cx="26" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <ellipse cx="74" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <path id="m4-mouth" d="M40 70 q10 -8 20 0" fill="none" stroke="#030305" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</g><g transform="translate(530 0) scale(0.96)">
+  <g id="m5-body">
+    <ellipse cx="50" cy="88" rx="26" ry="5" fill="#030305" opacity=".12"/>
+    <circle cx="50" cy="50" r="34" fill="#f3f5f9" stroke="#bdc1cc" stroke-width="2"/>
+    <path d="M22 34 q28 -20 56 0 q-28 -9 -56 0z" fill="#030305" opacity=".9"/>
+    <g id="m5-brows" transform="translate(0 -2)" stroke="#030305" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <path d="M31 39 q6 -3 12 -1"/>
+      <path d="M57 38 q6 -2 12 1"/>
+    </g>
+    <g id="m5-eyes">
+      <circle cx="38" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <circle cx="62" cy="50" r="7" fill="#ffffff" stroke="#030305" stroke-width="1.2"/>
+      <g id="m5-pupils">
+        <circle cx="38" cy="50" r="3.4" fill="#030305"/>
+        <circle cx="62" cy="50" r="3.4" fill="#030305"/>
+      </g>
+      <g id="m5-lids" fill="#f3f5f9" style="transform-origin:50px 50px">
+        <rect x="30" y="36" width="16" height="14" rx="2"/>
+        <rect x="54" y="36" width="16" height="14" rx="2"/>
+      </g>
+    </g>
+    <g fill="none" stroke="#28079d" stroke-width="2.6">
+           <circle cx="38" cy="50" r="11"/><circle cx="62" cy="50" r="11"/>
+           <path d="M49 50 h2"/><path d="M27 48 l-5 -3"/><path d="M73 48 l5 -3"/>
+         </g>
+    <ellipse cx="26" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <ellipse cx="74" cy="60" rx="5" ry="3" fill="#343d00" opacity=".45"/>
+    <path id="m5-mouth" d="M38 64 q12 12 24 0" fill="none" stroke="#030305" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</g></svg>

@@ -16,6 +16,13 @@ import { extract } from '../lib/extract.mjs';
 import { staticChecks, CASES } from '../lib/chaos.mjs';
 import { toSeed, hash } from '../lib/seed.mjs';
 import { contrast } from '../lib/color.mjs';
+import { persona, cast, card, identityKit, ARCHETYPES } from '../lib/persona.mjs';
+import { fixContrast, inspect } from '../lib/fix.mjs';
+import { roast } from '../lib/roast.mjs';
+import { checkVision, simulate, VISION } from '../lib/vision.mjs';
+import { printReport } from '../lib/print.mjs';
+import { apcaAdvice } from '../lib/apca.mjs';
+import { toFigma, toVsCode } from '../lib/targets.mjs';
 
 const argv = process.argv.slice(2);
 const COLOR = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -49,8 +56,19 @@ function usage(code = 0) {
   ${bold('notugly chaos')}                     the content that breaks design systems
   ${bold('notugly vibes')}                     the five starting points
 
+  ${bold('notugly persona')} <name>            a whole character: face, name, voice, colours
+  ${bold('notugly card')} <name>               a 1200x630 social card for that persona
+  ${bold('notugly cast')} <a> <b> <c>          a team, guaranteed visually distinct
+  ${bold('notugly fix')} <fg> <bg>             the nearest passing colour to the one you picked
+  ${bold('notugly roast')} <hex...>            what is wrong with your palette, rudely
+  ${bold('notugly vision')} [seed]             which colours collapse for colour-blind viewers
+  ${bold('notugly print')} [seed]              what survives CMYK
+  ${bold('notugly figma')} [seed]              a loadable Figma plugin
+  ${bold('notugly vscode')} [seed]             an editor theme from the same system
+
 ${dim('options')}  --vibe ${VIBE_NAMES.join('|')}   --dark   --style ${STYLES.slice(0, 4).join('|')}…
-         --out <dir>   --size <px>   --seed <seed>
+         --out <dir>   --size <px>   --seed <seed>   --brand <#hex>
+         --mood neutral|happy|thinking|surprised|sleepy|determined   --hat party|beanie|shades|scarf|halo|crown
 
 ${dim('Everything is deterministic: the same seed always gives the same design.')}`);
   process.exit(code);
@@ -60,7 +78,7 @@ ${dim('Everything is deterministic: the same seed always gives the same design.'
 function showSystem(seed) {
   const vibe = flag('vibe', 'editorial');
   const dark = has('dark');
-  const sys = system(seed, { vibe, dark });
+  const sys = system(seed, { vibe, dark, brand: flag('brand', null) });
   const a = audit(sys);
 
   console.log(`\n  ${bold(sys.vibeLabel)}  ${dim(`seed ${sys.seed}${dark ? ' · dark' : ''}`)}`);
@@ -102,7 +120,7 @@ function cmdAvatar(args) {
   const style = flag('style', 'face');
   const size = Number(flag('size', 200));
   const on = flag('on', null);
-  const svg = avatar(name, { style, size, on, label: name });
+  const svg = avatar(name, { style, size, on, label: name, mood: flag('mood', null), hat: flag('hat', 'none') });
   const out = flag('out', null);
 
   if (out) {
@@ -117,14 +135,16 @@ function cmdAvatar(args) {
 // --- export -----------------------------------------------------------------
 function cmdExport(args) {
   const seed = args[0] || flag('seed', 'notugly');
-  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark') });
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const e = exportAll(sys);
   const out = flag('out', null);
 
   if (!out) {
-    console.log(`\n  ${bold('Six files')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
+    const n = Object.keys(e.sizes).length;
+    console.log(`\n  ${bold(`${n} files`)}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
+    const width = Math.max(...Object.keys(e.sizes).map((f) => f.length)) + 2;
     for (const [f, s] of Object.entries(e.sizes)) {
-      console.log(`  ${f.padEnd(22)} ${dim(s.human.padStart(9))}`);
+      console.log(`  ${f.padEnd(width)} ${dim(s.human.padStart(9))}`);
     }
     console.log(
       `\n  ${dim('runtime cost')} ${c(32, '0 bytes')} ${dim('— static text, no dependency, nothing to install')}`
@@ -134,7 +154,12 @@ function cmdExport(args) {
   }
 
   mkdirSync(out, { recursive: true });
-  for (const [name, body] of Object.entries(e.files)) writeFileSync(`${out}/${name}`, body);
+  for (const [name, body] of Object.entries(e.files)) {
+    // figma/ and vscode/ are nested, so make the folder before writing into it.
+    const path = `${out}/${name}`;
+    mkdirSync(path.split('/').slice(0, -1).join('/'), { recursive: true });
+    writeFileSync(path, body);
+  }
   console.log(`\n  Wrote ${bold(String(Object.keys(e.files).length))} files to ${bold(out)}`);
   console.log(`  ${e.accessible ? c(32, '✓ WCAG AA throughout') : c(31, '✗ check the audit')}\n`);
 }
@@ -187,7 +212,7 @@ async function cmdSteal(args) {
 // --- audit ------------------------------------------------------------------
 function cmdAudit(args) {
   const seed = args[0] || flag('seed', 'notugly');
-  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark') });
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const a = audit(sys);
   const s = staticChecks(sys);
 
@@ -232,6 +257,194 @@ function cmdChaos() {
   console.log(`  ${dim('See them applied: https://mohitagw15856.github.io/notugly/#chaos')}\n`);
 }
 
+
+// --- persona ----------------------------------------------------------------
+function cmdPersona(args) {
+  const seed = args[0];
+  if (!seed) {
+    console.error('Who? Try: notugly persona mo');
+    process.exit(2);
+  }
+  const p = persona(seed, {
+    archetype: flag('archetype', null),
+    dark: has('dark'),
+    brand: flag('brand', null),
+    style: flag('style', null),
+  });
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    const kit = identityKit(p);
+    for (const [k, svg] of Object.entries(kit.avatars)) writeFileSync(`${out}/avatar-${k}.svg`, svg);
+    writeFileSync(`${out}/favicon.svg`, kit.faviconSquare);
+    writeFileSync(`${out}/card.svg`, kit.card);
+    writeFileSync(`${out}/persona.css`, kit.css);
+    writeFileSync(`${out}/persona.json`, JSON.stringify({ ...kit, avatars: Object.keys(kit.avatars), card: 'card.svg' }, null, 2));
+    console.log(`\n  Wrote an identity kit to ${bold(out)}  ${dim('8 files, nothing to install')}\n`);
+    return;
+  }
+
+  console.log(`\n  ${bold(p.name)} ${dim(p.handle)}`);
+  console.log(`  ${c(35, p.archetypeLabel)}  ${dim('·')}  ${dim(p.traits.join(' · '))}\n`);
+  console.log(`  ${p.bio}`);
+  console.log(`  ${dim(`"${p.catchphrase}"`)}\n`);
+  console.log(`  ${dim('colour'.padEnd(10))} ${COLOR ? `${swatch(p.colour)} ` : ''}${p.colour}`);
+  console.log(`  ${dim('face'.padEnd(10))} ${p.style}, feeling ${p.mood}`);
+  console.log(`  ${dim('energy'.padEnd(10))} ${'▮'.repeat(p.energy)}${dim('▯'.repeat(5 - p.energy))}`);
+  console.log(`  ${dim('vibe'.padEnd(10))} ${p.system.vibeLabel}\n`);
+  console.log(`  ${dim(`notugly persona ${seed} --out ./me   writes the avatars, favicon and social card`)}\n`);
+}
+
+function cmdCard(args) {
+  const seed = args[0];
+  if (!seed) {
+    console.error('Whose card? Try: notugly card mo');
+    process.exit(2);
+  }
+  const p = persona(seed, { archetype: flag('archetype', null), dark: has('dark'), brand: flag('brand', null) });
+  const svg = card(p, { tagline: flag('tagline', null) });
+  const out = flag('out', null);
+  if (out) {
+    writeFileSync(out, svg);
+    console.log(`\n  Wrote ${bold(out)}  ${dim('1200×630, no fonts to load, nothing to 404')}\n`);
+    return;
+  }
+  console.log(svg);
+}
+
+function cmdCast(args) {
+  const names = args.filter((a) => !a.startsWith('--'));
+  if (!names.length) {
+    console.error('Who is in it? Try: notugly cast ada grace linus');
+    process.exit(2);
+  }
+  const people = cast(names, { dark: has('dark') });
+  console.log(`\n  ${bold('The cast')}  ${dim(`${people.length} people, no two alike`)}\n`);
+  for (const p of people) {
+    console.log(
+      `  ${swatch(p.colour, 4)} ${bold(p.name.padEnd(18))} ${dim(p.handle.padEnd(16))} ${p.archetypeLabel.padEnd(20)} ${dim(p.style)}`
+    );
+    console.log(`  ${' '.repeat(4)} ${dim(p.bio)}\n`);
+  }
+  const out = flag('out', null);
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    for (const p of people) writeFileSync(`${out}/${p.seed}.svg`, p.avatar({ size: 256 }));
+    console.log(`  Wrote ${bold(String(people.length))} avatars to ${bold(out)}\n`);
+  }
+}
+
+// --- fix --------------------------------------------------------------------
+function cmdFix(args) {
+  const [fg, bg] = args;
+  if (!fg || !bg) {
+    console.error('Two colours, please: notugly fix "#8ab4f8" "#ffffff"');
+    process.exit(2);
+  }
+  const i = inspect(fg, bg);
+  console.log(`\n  ${swatch(fg)} ${fg}  ${dim('on')}  ${swatch(bg)} ${bg}\n`);
+  console.log(`  ${bold('WCAG 2')}    ${i.wcag.ratio}:1  ${i.wcag.aa ? c(32, i.wcag.grade) : c(31, 'fail')}  ${dim('needs 4.5 for body text')}`);
+  console.log(`  ${bold('APCA')}      Lc ${i.apca.lc}  ${dim(i.apca.use)}\n`);
+
+  if (i.wcag.aa) {
+    console.log(`  ${c(32, 'Nothing to fix.')} ${dim('It already passes.')}\n`);
+    return;
+  }
+  for (const [level, target] of [['AA Large', 'aaLarge'], ['AA', 'aa'], ['AAA', 'aaa']]) {
+    const f = i.fixes[target];
+    if (f.impossible) {
+      console.log(`  ${level.padEnd(9)} ${c(31, 'impossible')} ${dim(f.says)}`);
+      continue;
+    }
+    console.log(`  ${level.padEnd(9)} ${swatch(f.to)} ${bold(f.to)}  ${dim(`${f.after}:1`)}  ${dim(f.changed ? `moved ${f.moved} lightness` : 'already fine')}`);
+  }
+  console.log(`\n  ${dim('Hue and chroma untouched — it is still your colour, just readable.')}\n`);
+}
+
+// --- roast ------------------------------------------------------------------
+function cmdRoast(args) {
+  const colours = args.filter((a) => a.startsWith('#'));
+  if (!colours.length) {
+    console.error('Give me some colours: notugly roast "#fff" "#f8f8f8" "#00ffcc"');
+    process.exit(2);
+  }
+  const r = roast(colours);
+  console.log(`\n  ${bold(r.verdict)}  ${dim(`${r.score}/100`)}\n`);
+  for (const b of r.burns) {
+    const mark = b.severity >= 4 ? c(31, '✗') : b.severity >= 2 ? c(33, '!') : dim('·');
+    console.log(`  ${mark} ${b.says}`);
+    if (b.fix) console.log(`    ${dim('→ ' + b.fix)}`);
+    console.log();
+  }
+}
+
+// --- vision -----------------------------------------------------------------
+function cmdVision(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const v = checkVision(sys.colour);
+
+  console.log(`\n  ${bold('Colour vision')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
+  const roles = ['bg', 'surface', 'text', 'textMuted', 'brand', 'accent', 'buttonBg', 'border'];
+  console.log(`  ${dim('role'.padEnd(12))}${dim('normal'.padEnd(10))}${VISION.map((k) => dim(k.slice(0, 6).padEnd(10))).join('')}`);
+  for (const role of roles) {
+    const hex = sys.colour[role];
+    if (!hex) continue;
+    console.log(
+      `  ${dim(role.padEnd(12))}${swatch(hex, 4)}${' '.repeat(6)}` +
+        VISION.map((k) => `${swatch(simulate(hex, k), 4)}${' '.repeat(6)}`).join('')
+    );
+  }
+  console.log(`\n  ${v.passed ? c(32, '✓ no two colours collapse into each other') : c(33, `! ${v.collisions.length} collision(s)`)}`);
+  for (const col of v.collisions) {
+    console.log(`    ${col.pair[0]} + ${col.pair[1]} ${dim(`→ both ${col.becomes[0]} under ${col.kind} (${col.prevalence})`)}`);
+  }
+  console.log(`\n  ${dim(v.note)}\n`);
+}
+
+// --- print ------------------------------------------------------------------
+function cmdPrint(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const r = printReport(sys.colour);
+  console.log(`\n  ${bold('On paper')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
+  for (const check of r.checks) {
+    const flagged = check.notes.length;
+    console.log(
+      `  ${swatch(check.hex, 4)} ${check.role.padEnd(12)} ${dim(`${check.coverage}% ink`)}` +
+        (check.shift.inGamut ? dim('  in gamut') : `  ${c(33, `→ ${check.shift.as}`)}`)
+    );
+    for (const n of check.notes) console.log(`      ${n.level === 'error' ? c(31, '✗') : n.level === 'warn' ? c(33, '!') : dim('·')} ${dim(n.says)}`);
+  }
+  console.log(`\n  ${r.safe ? c(32, '✓ nothing that will stop a press') : c(31, '✗ over ink limit')}`);
+  console.log(`  ${dim('Naive CMYK, not an ICC profile — it catches the obvious problems, not the subtle ones.')}\n`);
+}
+
+// --- other targets ----------------------------------------------------------
+function cmdTarget(args, name, make, hint) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const files = make(sys);
+  const out = flag('out', null);
+  if (!out) {
+    console.log(`\n  ${bold(name)}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
+    for (const [f, body] of Object.entries(files)) {
+      console.log(`  ${f.padEnd(36)} ${dim(`${(Buffer.byteLength(body) / 1024).toFixed(1)} kB`)}`);
+    }
+    console.log(`\n  ${dim(hint)}`);
+    console.log(`  ${dim(`notugly ${name.toLowerCase().replace(/\s.*/, '')} ${sys.seed} --out ./${name.toLowerCase().split(' ')[0]}  writes them`)}\n`);
+    return;
+  }
+  for (const [f, body] of Object.entries(files)) {
+    const path = `${out}/${f}`;
+    mkdirSync(path.split('/').slice(0, -1).join('/') || '.', { recursive: true });
+    writeFileSync(path, body);
+  }
+  console.log(`\n  Wrote ${bold(String(Object.keys(files).length))} files to ${bold(out)}`);
+  console.log(`  ${dim(hint)}\n`);
+}
+
 // ---------------------------------------------------------------------------
 const cmd = argv[0];
 if (argv.includes('--help') || argv.includes('-h')) usage(0);
@@ -254,6 +467,33 @@ switch (cmd) {
     break;
   case 'chaos':
     cmdChaos();
+    break;
+  case 'persona':
+    cmdPersona(argv.slice(1));
+    break;
+  case 'card':
+    cmdCard(argv.slice(1));
+    break;
+  case 'cast':
+    cmdCast(argv.slice(1));
+    break;
+  case 'fix':
+    cmdFix(argv.slice(1));
+    break;
+  case 'roast':
+    cmdRoast(argv.slice(1));
+    break;
+  case 'vision':
+    cmdVision(argv.slice(1));
+    break;
+  case 'print':
+    cmdPrint(argv.slice(1));
+    break;
+  case 'figma':
+    cmdTarget(argv.slice(1), 'Figma plugin', toFigma, 'Plugins → Development → Import plugin from manifest.');
+    break;
+  case 'vscode':
+    cmdTarget(argv.slice(1), 'VS Code theme', toVsCode, 'Drop it in ~/.vscode/extensions and restart.');
     break;
   case undefined:
     // No arguments: make something, so the first run shows the product.

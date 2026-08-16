@@ -7,7 +7,9 @@
 
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { avatar, STYLES } from '../lib/avatar.mjs';
+import { avatar, STYLES, MOODS } from '../lib/avatar.mjs';
+import { persona, card } from '../lib/persona.mjs';
+import { mascot } from '../lib/mascot.mjs';
 import { system, audit } from '../lib/system.mjs';
 import { VIBES, VIBE_NAMES } from '../lib/vibe.mjs';
 
@@ -34,18 +36,79 @@ const strip = (names, style, { size = 100, gap = 14 } = {}) => {
 
 writeFileSync(`${ROOT}assets/readme/cast.svg`, strip(CAST, 'face'));
 
-// One name, every style — the "eight styles" claim, shown rather than stated.
+// One name, every style. Twenty in a row would be 1900px wide and render at
+// thumbnail size on GitHub, so it wraps.
 writeFileSync(`${ROOT}assets/readme/styles.svg`, (() => {
   const size = 84;
   const gap = 12;
-  const w = STYLES.length * (size + gap) - gap;
+  const perRow = 10;
+  const rows = Math.ceil(STYLES.length / perRow);
+  const w = Math.min(STYLES.length, perRow) * (size + gap) - gap;
+  const h = rows * (size + gap) - gap;
   const inner = STYLES.map((s, i) => {
     const svg = avatar('mo', { style: s, size, on: PAGE, label: s })
       .replace(/^<svg[^>]*>/, '')
       .replace(/<\/svg>$/, '');
+    const x = (i % perRow) * (size + gap);
+    const y = Math.floor(i / perRow) * (size + gap);
+    return `<g transform="translate(${x} ${y}) scale(${size / 100})">${svg}</g>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="One name in ${STYLES.length} avatar styles">${inner}</svg>`;
+})());
+
+// The same person, every mood. The claim is that it stays the same person, so
+// the strip has to be one seed across the whole row.
+writeFileSync(`${ROOT}assets/readme/moods.svg`, (() => {
+  const size = 96;
+  const gap = 14;
+  const w = MOODS.length * (size + gap) - gap;
+  const inner = MOODS.map((m, i) => {
+    const svg = avatar('mo', { style: 'specs', size, on: PAGE, mood: m === 'neutral' ? null : m, label: m })
+      .replace(/^<svg[^>]*>/, '')
+      .replace(/<\/svg>$/, '');
     return `<g transform="translate(${i * (size + gap)} 0) scale(${size / 100})">${svg}</g>`;
   }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${size}" viewBox="0 0 ${w} ${size}" role="img" aria-label="One name in eight avatar styles">${inner}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${size}" viewBox="0 0 ${w} ${size}" role="img" aria-label="One face in ${MOODS.length} moods">${inner}</svg>`;
+})());
+
+// The hand-drawn and creature styles, which are the ones worth showing off.
+writeFileSync(`${ROOT}assets/readme/doodles.svg`, (() => {
+  const picks = [
+    ['pencil', 'ada'], ['pencil', 'linus'], ['specs', 'grace'], ['specs', 'radia'],
+    ['line', 'mo'], ['cat', 'siyu'], ['dog', 'alan'], ['duck', 'tim'],
+    ['capybara', 'barbara'], ['monster', 'margaret'], ['object', 'donald'], ['ghost', 'katherine'],
+  ];
+  const size = 104;
+  const gap = 10;
+  const perRow = 6;
+  const w = perRow * (size + gap) - gap;
+  const h = Math.ceil(picks.length / perRow) * (size + gap) - gap;
+  const inner = picks.map(([style, name], i) => {
+    const svg = avatar(name, { style, size, on: PAGE, label: `${name} as a ${style}` })
+      .replace(/^<svg[^>]*>/, '')
+      .replace(/<\/svg>$/, '');
+    return `<g transform="translate(${(i % perRow) * (size + gap)} ${Math.floor(i / perRow) * (size + gap)}) scale(${size / 100})">${svg}</g>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Pencil people, creatures and one-line portraits">${inner}</svg>`;
+})());
+
+// A real persona card, generated the same way anyone else's would be.
+writeFileSync(`${ROOT}assets/readme/persona.svg`, card(persona('siyu'), { tagline: 'made with notugly' }));
+
+// The mascot, in the states he actually uses.
+writeFileSync(`${ROOT}assets/readme/mascot.svg`, (() => {
+  const sys = system('notugly', { vibe: 'playful' });
+  const states = ['idle', 'happy', 'thinking', 'shocked', 'worried', 'proud'];
+  const size = 96;
+  const gap = 10;
+  const w = states.length * (size + gap) - gap;
+  const inner = states.map((st, i) => {
+    const svg = mascot(sys.colour, { size, state: st, id: `m${i}` })
+      .replace(/^<svg[^>]*>/, '')
+      .replace(/<\/svg>$/, '');
+    return `<g transform="translate(${i * (size + gap)} 0) scale(${size / 100})">${svg}</g>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${size}" viewBox="0 0 ${w} ${size}" role="img" aria-label="The notugly mascot in six moods">${inner}</svg>`;
 })());
 
 // --- a card per vibe ---------------------------------------------------------

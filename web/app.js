@@ -11,6 +11,13 @@ import { pattern, PATTERNS } from './lib/pattern.mjs';
 import { blob, divider, DIVIDERS } from './lib/shape.mjs';
 import { toSeed } from './lib/seed.mjs';
 import { contrast } from './lib/color.mjs';
+import { MOODS, MOOD_STYLES, HATS } from './lib/avatar.mjs';
+import { persona, cast, card, identityKit, ARCHETYPES } from './lib/persona.mjs';
+import { mascot, reactTo, quip } from './lib/mascot.mjs';
+import { inspect } from './lib/fix.mjs';
+import { roast } from './lib/roast.mjs';
+import { checkVision, simulate, VISION, PREVALENCE } from './lib/vision.mjs';
+import { printReport } from './lib/print.mjs';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -21,6 +28,12 @@ const state = {
   vibe: 'editorial',
   dark: false,
   avatarStyle: 'face',
+  avatarMood: 'neutral',
+  avatarHat: 'none',
+  personaSeed: 'mo',
+  archetype: null,
+  battle: null,
+  mascotState: 'idle',
   demo: 'dashboard',
   exportFile: 'notugly.css',
   sys: null,
@@ -288,9 +301,30 @@ function renderAvatars(sys) {
   const names = [base, ...NAMES.filter((n) => n !== base)].slice(0, 12);
   $('#avgrid').innerHTML = names
     .map(
-      (n) => `<div class="av">${avatar(n, { style: state.avatarStyle, size: 88, on: sys.colour.bg, label: n })}<span>${esc(n)}</span></div>`
+      (n) =>
+        `<div class="av">${avatar(n, {
+          style: state.avatarStyle,
+          size: 88,
+          on: sys.colour.bg,
+          label: n,
+          mood: state.avatarMood === 'neutral' ? null : state.avatarMood,
+          hat: state.avatarHat,
+        })}<span>${esc(n)}</span></div>`
     )
     .join('');
+
+  // One name, every mood, side by side — the clearest possible demonstration
+  // that it is the same person each time.
+  $('#moodstrip').innerHTML = MOODS.map(
+    (m) =>
+      `<div class="av">${avatar(base, {
+        style: MOOD_STYLES.includes(state.avatarStyle) ? state.avatarStyle : 'face',
+        size: 68,
+        on: sys.colour.bg,
+        mood: m === 'neutral' ? null : m,
+        label: `${base}, ${m}`,
+      })}<span>${m}</span></div>`
+  ).join('');
 }
 
 // --- chaos ------------------------------------------------------------------
@@ -405,6 +439,256 @@ function renderGallery() {
   );
 }
 
+
+// --- the mascot -------------------------------------------------------------
+// He is re-serialised only when the system changes. The eye tracking moves two
+// circles via a transform, because rebuilding the SVG on every mousemove is how
+// you make a 120px character cost more than the rest of the page.
+
+let mascotIdle = null;
+let quipN = 0;
+
+function renderMascot(sys) {
+  $('#mascot').innerHTML = mascot(sys.colour, { size: 132, state: state.mascotState });
+  setMascotState(state.mascotState, true);
+}
+
+function setMascotState(next, quiet = false) {
+  state.mascotState = next;
+  const el = $('#nu-mascot');
+  if (!el) return;
+  if (!quiet) {
+    el.innerHTML = mascot(state.sys.colour, { size: 132, state: next })
+      .replace(/^[\s\S]*?<g id="nu-mascot-body">/, '<g id="nu-mascot-body">')
+      .replace(/<\/svg>$/, '');
+    el.dataset.state = next;
+    // Only the body is swapped, so the label on the outer element has to be
+    // updated by hand — otherwise a screen reader is told he is still idle
+    // twenty minutes after he fell asleep.
+    el.setAttribute('aria-label', `The notugly mascot, ${next}`);
+  }
+  $('#mascot-quip').textContent = quip(next, quipN++);
+
+  // He falls asleep if you leave him alone, and wakes up when you come back.
+  clearTimeout(mascotIdle);
+  if (next !== 'asleep') {
+    mascotIdle = setTimeout(() => setMascotState('asleep'), 25000);
+  }
+}
+
+function trackEyes(e) {
+  const pupils = $('#nu-mascot-pupils');
+  if (!pupils) return;
+  const box = $('#nu-mascot').getBoundingClientRect();
+  if (!box.width) return;
+  const dx = e.clientX - (box.left + box.width / 2);
+  const dy = e.clientY - (box.top + box.height / 2);
+  const d = Math.hypot(dx, dy) || 1;
+  // Capped well inside the lens so he never looks like his eyes fell out.
+  const reach = Math.min(2.6, d / 90);
+  pupils.setAttribute('transform', `translate(${(dx / d) * reach} ${(dy / d) * reach})`);
+  if (state.mascotState === 'asleep') setMascotState('idle');
+}
+
+// --- personas ---------------------------------------------------------------
+
+function currentPersona() {
+  return persona(state.personaSeed, { archetype: state.archetype, dark: state.dark });
+}
+
+function renderPersona() {
+  const p = currentPersona();
+  const c = p.system.colour;
+
+  $('#personabox').innerHTML = `
+    <div class="persona" style="--p:${p.colour};background:${c.surface};border-color:${c.border}">
+      <div class="pface">${p.avatar({ size: 150, on: c.surface })}</div>
+      <div class="pmeta">
+        <h3 style="color:${c.text}">${esc(p.name)}</h3>
+        <p class="phandle">${esc(p.handle)} · <b>${esc(p.archetypeLabel)}</b></p>
+        <p class="pbio" style="color:${c.text}">${esc(p.bio)}</p>
+        <p class="psays">“${esc(p.catchphrase)}”</p>
+        <div class="ptraits">${p.traits.map((t) => `<span>${esc(t)}</span>`).join('')}</div>
+        <div class="penergy" aria-label="Energy ${p.energy} of 5">
+          ${Array.from({ length: 5 }, (_, i) => `<i class="${i < p.energy ? 'on' : ''}"></i>`).join('')}
+        </div>
+      </div>
+      <div class="pkit">
+        ${['favicon', 'small', 'medium'].map((k) => {
+          const size = { favicon: 32, small: 48, medium: 64 }[k];
+          return `<div class="pkitem">${p.avatar({ size, on: c.surface })}<span>${size}px</span></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  $('#cardbox').innerHTML = card(p, { tagline: 'made with notugly' });
+  $$('#parchetypes button').forEach((b) =>
+    b.setAttribute('aria-selected', String((b.dataset.arch || null) === state.archetype))
+  );
+
+  const seeds = ['ada', 'grace', 'linus', 'radia', 'katherine', 'alan'];
+  $('#castgrid').innerHTML = cast(seeds, { dark: state.dark })
+    .map(
+      (m) => `<div class="castcard" style="border-color:${m.colour}">
+        ${m.avatar({ size: 72, on: state.sys.colour.surface })}
+        <b>${esc(m.name)}</b>
+        <span class="fine">${esc(m.archetypeLabel)}</span>
+      </div>`
+    )
+    .join('');
+}
+
+function download(name, body, type = 'image/svg+xml') {
+  const url = URL.createObjectURL(new Blob([body], { type }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// --- judgement --------------------------------------------------------------
+
+function renderFix() {
+  const fg = $('#fixfg').value.trim();
+  const bg = $('#fixbg').value.trim();
+  const ok = (h) => /^#[0-9a-f]{6}$/i.test(h);
+  if (!ok(fg) || !ok(bg)) {
+    $('#fixout').innerHTML = `<p class="fine">Two six-digit hex colours, please.</p>`;
+    return;
+  }
+  const i = inspect(fg, bg);
+  const row = (label, f) =>
+    f.impossible
+      ? `<tr><td>${label}</td><td colspan="2" class="fine">impossible against this background</td></tr>`
+      : `<tr><td>${label}</td>
+         <td><i class="sw" style="background:${f.to}"></i><code>${f.to}</code></td>
+         <td class="num">${f.after}:1</td></tr>`;
+
+  $('#fixout').innerHTML = `
+    <div class="fixdemo">
+      <div style="background:${bg};color:${fg}">The quick brown fox</div>
+      <div style="background:${bg};color:${i.fixes.aa.to}">The quick brown fox</div>
+    </div>
+    <p class="verdict ${i.wcag.aa ? 'good' : 'bad'}">
+      ${i.wcag.ratio}:1 — ${i.wcag.aa ? i.wcag.grade.toUpperCase() : 'fails AA'}
+      <span class="fine">· APCA Lc ${i.apca.lc}, ${esc(i.apca.use)}</span>
+    </p>
+    ${i.wcag.aa ? '' : `<table class="tokens">${row('AA Large', i.fixes.aaLarge)}${row('AA', i.fixes.aa)}${row('AAA', i.fixes.aaa)}</table>`}`;
+}
+
+function renderVision(sys) {
+  const v = checkVision(sys.colour);
+  const roles = ['bg', 'surface', 'text', 'brand', 'accent', 'buttonBg', 'border'];
+  $('#visionout').innerHTML = `
+    <table class="tokens vision">
+      <tr><th></th><th>normal</th>${VISION.map((k) => `<th title="${PREVALENCE[k]}">${k.slice(0, 6)}</th>`).join('')}</tr>
+      ${roles
+        .map(
+          (r) => `<tr><td class="fine">${r}</td>
+            <td><i class="sw" style="background:${sys.colour[r]}"></i></td>
+            ${VISION.map((k) => `<td><i class="sw" style="background:${simulate(sys.colour[r], k)}"></i></td>`).join('')}
+          </tr>`
+        )
+        .join('')}
+    </table>
+    <p class="verdict ${v.passed ? 'good' : 'warn'}">
+      ${v.passed ? 'No two colours collapse into each other.' : `${v.collisions.length} pair(s) merge.`}
+    </p>
+    ${v.collisions
+      .map((c) => `<p class="fine"><i class="sw" style="background:${c.pair[0]}"></i><i class="sw" style="background:${c.pair[1]}"></i> both become ${c.becomes[0]} under ${c.kind} (${c.prevalence})</p>`)
+      .join('')}`;
+}
+
+function renderPrint(sys) {
+  const r = printReport(sys.colour);
+  $('#printout').innerHTML = `
+    <table class="tokens">
+      ${r.checks
+        .map(
+          (c) => `<tr>
+            <td class="fine">${c.role}</td>
+            <td><i class="sw" style="background:${c.hex}"></i></td>
+            <td>${c.shift.inGamut ? '<span class="fine">in gamut</span>' : `<i class="sw" style="background:${c.shift.as}"></i><span class="fine">${c.shift.as}</span>`}</td>
+            <td class="num fine">${c.coverage}%</td>
+          </tr>`
+        )
+        .join('')}
+    </table>
+    <p class="fine">Left is the screen. Right is roughly what a press can reach.</p>`;
+}
+
+function renderRoast() {
+  const colours = ($('#roastin').value.match(/#[0-9a-f]{6}/gi) || []).map((c) => c.toLowerCase());
+  const r = roast(colours);
+  $('#roastout').innerHTML = `
+    <p class="verdict ${r.score >= 70 ? 'good' : 'bad'}">${esc(r.verdict)} <span class="fine">${r.score}/100</span></p>
+    <ul class="burns">${r.burns.map((b) => `<li>${esc(b.says)}${b.fix ? `<br><span class="fine">→ ${esc(b.fix)}</span>` : ''}</li>`).join('')}</ul>`;
+}
+
+// --- two-up battle ----------------------------------------------------------
+// Twenty clicks and it has worked out what you like, without ever asking you a
+// question you would not be able to answer.
+
+function newBattle(keep = null) {
+  const rnd = () => toSeed(Math.floor(performance.now() * 1000) ^ Date.now() ^ Math.floor(Math.random() * 1e9));
+  const pick = () => ({
+    seed: rnd(),
+    vibe: keep && Math.random() < 0.6 ? keep.vibe : VIBE_NAMES[Math.floor(Math.random() * VIBE_NAMES.length)],
+    dark: keep && Math.random() < 0.7 ? keep.dark : Math.random() < 0.4,
+  });
+  state.battle = { a: pick(), b: pick(), round: (state.battle?.round || 0) + 1, keep };
+  renderBattle();
+}
+
+function renderBattle() {
+  const { a, b, round } = state.battle;
+  const side = (cfg, which) => {
+    const s = system(cfg.seed, { vibe: cfg.vibe, dark: cfg.dark });
+    return `<button class="bside" data-side="${which}" style="background:${s.colour.bg};color:${s.colour.text};border-color:${s.colour.border}">
+      <span class="bramp">${s.colour.primary.slice(2, 9).map((h) => `<i style="background:${h}"></i>`).join('')}</span>
+      <b style="font-family:${s.type.heading}">${esc(s.seed)}</b>
+      <span class="bbtn" style="background:${s.colour.buttonBg};color:${s.colour.buttonText};border-radius:${s.radius.md}px">Button</span>
+      <span class="fine" style="color:${s.colour.textMuted}">${s.vibeLabel}${cfg.dark ? ' · dark' : ''}</span>
+    </button>`;
+  };
+  $('#battle').innerHTML = `
+    <p class="fine">Round ${round}${state.battle.keep ? ` · leaning ${state.battle.keep.vibe}${state.battle.keep.dark ? ', dark' : ''}` : ''}</p>
+    <div class="bpair">${side(a, 'a')}<span class="bvs">or</span>${side(b, 'b')}</div>`;
+  $$('#battle .bside').forEach((el) =>
+    el.addEventListener('click', () => {
+      const won = state.battle[el.dataset.side];
+      // Adopt the winner immediately — the whole page becomes it, which is the
+      // fastest possible way to tell whether you actually meant it.
+      state.seed = won.seed;
+      state.vibe = won.vibe;
+      state.dark = won.dark;
+      $('#seed').value = won.seed;
+      generate();
+      newBattle(won);
+    })
+  );
+}
+
+// --- keyboard ---------------------------------------------------------------
+
+function keys(e) {
+  // Never steal a key from someone typing a seed.
+  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  const vi = VIBE_NAMES.indexOf(state.vibe);
+
+  if (k === 'r') { $('#reroll').click(); }
+  else if (k === 'd') { $('#mode').click(); }
+  else if (e.key === 'ArrowRight') { state.vibe = VIBE_NAMES[(vi + 1) % VIBE_NAMES.length]; generate(); }
+  else if (e.key === 'ArrowLeft') { state.vibe = VIBE_NAMES[(vi - 1 + VIBE_NAMES.length) % VIBE_NAMES.length]; generate(); }
+  else if (k === 'e') { document.getElementById('export').scrollIntoView({ behavior: 'smooth' }); }
+  else if (k === 'p') { document.getElementById('personas').scrollIntoView({ behavior: 'smooth' }); }
+  else if (k === '?') { $('.keys').classList.toggle('lit'); }
+  else return;
+  e.preventDefault();
+}
+
 // --- wiring -----------------------------------------------------------------
 
 function generate() {
@@ -418,8 +702,15 @@ function generate() {
   renderAvatars(sys);
   renderChaos(sys);
   renderExport(sys);
+  renderMascot(sys);
+  renderPersona();
+  renderVision(sys);
+  renderPrint(sys);
+  renderFix();
 
-  $('#brand-avatar').innerHTML = avatar(state.seed, { style: 'geometric', size: 24, on: sys.colour.bg });
+  // The brand mark is the mascot at 24px — small enough that the glasses are
+  // the only thing that survives, which turns out to be enough.
+  $('#brand-avatar').innerHTML = mascot(sys.colour, { size: 24, state: 'happy', id: 'nu-brand' });
   $$('#vibes .vibe').forEach((b) => b.setAttribute('aria-selected', b.dataset.vibe === state.vibe));
   $('#mode').setAttribute('aria-pressed', String(state.dark));
   $('#mode').textContent = state.dark ? 'Light' : 'Dark';
@@ -501,6 +792,86 @@ function boot() {
   if (VIBE_NAMES.includes(q.get('vibe'))) state.vibe = q.get('vibe');
   if (q.get('dark')) state.dark = true;
   $('#seed').value = state.seed;
+
+  // --- avatar moods and hats ---
+  $('#avmoods').innerHTML = ['neutral', ...MOODS.filter((m) => m !== 'neutral')]
+    .map((m) => `<button data-mood="${m}" aria-selected="${m === state.avatarMood}">${m}</button>`)
+    .join('');
+  $$('#avmoods button').forEach((b) =>
+    b.addEventListener('click', () => {
+      state.avatarMood = b.dataset.mood;
+      $$('#avmoods button').forEach((x) => x.setAttribute('aria-selected', x === b));
+      renderAvatars(state.sys);
+    })
+  );
+  $('#avhats').innerHTML = HATS.map(
+    (h) => `<button data-hat="${h}" aria-selected="${h === state.avatarHat}">${h}</button>`
+  ).join('');
+  $$('#avhats button').forEach((b) =>
+    b.addEventListener('click', () => {
+      state.avatarHat = b.dataset.hat;
+      $$('#avhats button').forEach((x) => x.setAttribute('aria-selected', x === b));
+      renderAvatars(state.sys);
+    })
+  );
+
+  // --- personas ---
+  $('#parchetypes').innerHTML =
+    `<button data-arch="" aria-selected="true">any</button>` +
+    ARCHETYPES.map((a) => `<button data-arch="${a.key}">${a.label.replace('The ', '')}</button>`).join('');
+  $$('#parchetypes button').forEach((b) =>
+    b.addEventListener('click', () => {
+      state.archetype = b.dataset.arch || null;
+      renderPersona();
+    })
+  );
+  $('#pname').addEventListener('input', (e) => {
+    state.personaSeed = e.target.value.trim() || 'mo';
+    renderPersona();
+  });
+  $('#preroll').addEventListener('click', () => {
+    state.personaSeed = toSeed(Math.floor(performance.now() * 1000) ^ Date.now());
+    $('#pname').value = state.personaSeed;
+    renderPersona();
+    setMascotState('shocked');
+  });
+  $('#dlcard').addEventListener('click', () => {
+    const p = currentPersona();
+    download(`${p.seed}-card.svg`, card(p, { tagline: 'made with notugly' }));
+    setMascotState('happy');
+  });
+  $('#dlkit').addEventListener('click', () => {
+    const kit = identityKit(currentPersona());
+    // One HTML file holding every asset, because a zip needs a dependency and
+    // eight separate downloads needs eight clicks.
+    const page = `<!doctype html><meta charset="utf-8"><title>${esc(kit.name)} — identity kit</title>
+<style>body{font:16px system-ui;max-width:60rem;margin:3rem auto;padding:0 1rem}
+h1{margin:0}code{background:#eee;padding:.15em .4em;border-radius:4px}
+.row{display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin:1rem 0}</style>
+<h1>${esc(kit.name)}</h1><p>${esc(kit.handle)} — ${esc(kit.bio)}</p>
+<p>Brand colour: <code>${kit.colour}</code></p>
+<div class="row">${Object.entries(kit.avatars).map(([k, svg]) => `<figure style="margin:0"><figcaption><small>${k}</small></figcaption>${svg}</figure>`).join('')}</div>
+<h2>Social card</h2>${kit.card}
+<h2>CSS</h2><pre><code>${esc(kit.css)}</code></pre>`;
+    download(`${kit.name.replace(/\s+/g, '-').toLowerCase()}-identity.html`, page, 'text/html');
+    setMascotState('happy');
+  });
+
+  // --- judgement ---
+  $('#fixfg').addEventListener('input', renderFix);
+  $('#fixbg').addEventListener('input', renderFix);
+  $('#roastgo').addEventListener('click', () => {
+    renderRoast();
+    setMascotState('worried');
+  });
+  renderRoast();
+  newBattle();
+
+  // --- ambient ---
+  addEventListener('pointermove', trackEyes, { passive: true });
+  addEventListener('keydown', keys);
+  $('#reroll').addEventListener('click', () => setMascotState('shocked'));
+  $('#mascotwrap').addEventListener('click', () => setMascotState('happy'));
 
   renderGallery();
   generate();

@@ -2,7 +2,7 @@
 // Assembles site/ — the same library the CLI uses, copied verbatim so the
 // browser and the terminal cannot drift apart.
 
-import { writeFileSync, mkdirSync, copyFileSync, rmSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, copyFileSync, rmSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { system, audit } from '../lib/system.mjs';
@@ -16,9 +16,10 @@ mkdirSync(`${OUT}/lib`, { recursive: true });
 
 for (const f of ['index.html', 'style.css', 'app.js']) copyFileSync(`${ROOT}web/${f}`, `${OUT}/${f}`);
 
-// Every library file the page imports. These are plain ESM with no Node
-// built-ins, which is exactly why they can be served as-is.
-const LIBS = ['seed.mjs', 'color.mjs', 'avatar.mjs', 'gradient.mjs', 'shadow.mjs', 'pattern.mjs', 'shape.mjs', 'type.mjs', 'motion.mjs', 'vibe.mjs', 'system.mjs', 'export.mjs', 'chaos.mjs'];
+// The whole library, read from disk rather than listed here. A hand-kept list
+// is a trap: add a file, forget the list, and the page 404s at runtime in
+// production with no build error to warn you. Ask the directory instead.
+const LIBS = readdirSync(`${ROOT}lib`).filter((f) => f.endsWith('.mjs')).sort();
 for (const f of LIBS) copyFileSync(`${ROOT}lib/${f}`, `${OUT}/lib/${f}`);
 
 // Refuse to ship a library that would break in a browser.

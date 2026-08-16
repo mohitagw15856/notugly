@@ -15,6 +15,15 @@ import { pattern, PATTERNS } from '../lib/pattern.mjs';
 import { blob, divider, DIVIDERS } from '../lib/shape.mjs';
 import { scale, typeSystem, PAIRINGS } from '../lib/type.mjs';
 import { motion, PRESETS } from '../lib/motion.mjs';
+import { MOODS, MOOD_STYLES, HATS, seasonalHat } from '../lib/avatar.mjs';
+import { apca, apcaAdvice } from '../lib/apca.mjs';
+import { simulate, collisions, checkVision, VISION } from '../lib/vision.mjs';
+import { toCmyk, fromCmyk, tac, printShift, checkPrint, maxPrintableChroma } from '../lib/print.mjs';
+import { fixContrast, inspect } from '../lib/fix.mjs';
+import { roast } from '../lib/roast.mjs';
+import { persona, cast, card, identityKit, handle, displayName, ARCHETYPES } from '../lib/persona.mjs';
+import { mascot, MASCOT_STATES, reactTo, quip } from '../lib/mascot.mjs';
+import { toFigma, toVsCode } from '../lib/targets.mjs';
 
 let pass = 0;
 const fails = [];
@@ -263,10 +272,10 @@ t('every motion preset ships its own off switch', () => {
 });
 
 // --- exports ---------------------------------------------------------------
-t('all six exports are produced and non-trivial', () => {
+t('every export target is produced and non-trivial', () => {
   const e = exportAll(system('exp'));
-  eq(Object.keys(e.files).length, 6);
-  for (const [name, body] of Object.entries(e.files)) ok(body.length > 200, `${name} is suspiciously short`);
+  eq(Object.keys(e.files).length, 10);
+  for (const [name, body] of Object.entries(e.files)) ok(body.length > 150, `${name} is suspiciously short`);
 });
 t('exports report their size and claim no runtime', () => {
   const e = exportAll(system('exp'));
@@ -318,6 +327,444 @@ t('the chaos suite covers the real failure modes', () => {
 });
 t('every generated system passes the static checks', () => {
   for (const v of VIBE_NAMES) ok(staticChecks(system('c', { vibe: v })).passed, v);
+});
+
+
+
+// --- APCA -------------------------------------------------------------------
+
+t('APCA matches the published reference values', () => {
+  // These three exercise both polarities and every constant in the model. If
+  // the implementation drifts, one of them moves.
+  eq(apca('#000000', '#ffffff'), 106.04, 'black on white');
+  eq(apca('#ffffff', '#000000'), -107.88, 'white on black');
+  eq(apca('#888888', '#ffffff'), 63.06, 'mid grey on white');
+});
+
+t('APCA is asymmetric, which is the entire point of it', () => {
+  // WCAG 2 gives these two the same number. They are not equally readable.
+  ok(Math.abs(apca('#767676', '#ffffff')) !== Math.abs(apca('#ffffff', '#767676')),
+     'swapping text and background produced the same magnitude');
+});
+
+t('identical colours have no contrast in either model', () => {
+  eq(apca('#4a5568', '#4a5568'), 0);
+  eq(+contrast('#4a5568', '#4a5568').toFixed(2), 1);
+});
+
+// --- colour vision ----------------------------------------------------------
+
+t('a deuteranope sees red and green converge on the same hue', () => {
+  const [, , redH] = hexToOklch(simulate('#ff0000', 'deuteranopia'));
+  const [, , greenH] = hexToOklch(simulate('#00ff00', 'deuteranopia'));
+  const gap = Math.abs(((redH - greenH + 540) % 360) - 180);
+  ok(gap < 20, `red and green stayed ${gap.toFixed(0)}° apart — the matrices are wrong`);
+});
+
+t('blue is untouched for a deuteranope and grey is untouched for everyone', () => {
+  eq(simulate('#0000ff', 'deuteranopia'), '#0000ff');
+  for (const kind of VISION) eq(simulate('#808080', kind), '#808080', kind);
+});
+
+t('severity zero is the identity, so partial deficiency interpolates properly', () => {
+  for (const kind of VISION) eq(simulate('#e4002b', kind, 0), '#e4002b', kind);
+});
+
+t('each deficiency is a genuinely different transform', () => {
+  // Not blue: blue is a fixed point of all three projections by construction,
+  // because the planes are built to contain the blue and white anchors. Green
+  // is where they actually disagree.
+  const seen = new Set(['protanopia', 'deuteranopia', 'tritanopia'].map((k) => simulate('#22aa55', k)));
+  eq(seen.size, 3, 'two deficiencies produced the same answer');
+});
+
+t('blue survives all three dichromacies, as the model says it must', () => {
+  for (const k of ['protanopia', 'deuteranopia', 'tritanopia']) eq(simulate('#0000ff', k), '#0000ff', k);
+});
+
+t('collisions only report pairs that were distinguishable to begin with', () => {
+  // Two identical colours are not a colour-blindness problem.
+  eq(collisions(['#123456', '#123456']).length, 0);
+});
+
+t('no generated system has two colours that merge for a viewer', () => {
+  for (const v of VIBE_NAMES) {
+    for (const dark of [false, true]) {
+      const r = checkVision(system('vision-check', { vibe: v, dark }).colour);
+      ok(r.passed, `${v}${dark ? ' dark' : ''}: ${JSON.stringify(r.collisions[0] ?? {})}`);
+    }
+  }
+});
+
+// --- print ------------------------------------------------------------------
+
+t('CMYK round-trips, so the gamut check cannot lean on it', () => {
+  for (const hex of ['#ffffff', '#000000', '#ff0000', '#3a7bd5']) eq(fromCmyk(toCmyk(hex)), hex);
+});
+
+t('total ink coverage is sane at the extremes', () => {
+  eq(tac('#ffffff'), 0, 'paper needs no ink');
+  eq(tac('#000000'), 100, 'black is one plate, not four');
+});
+
+t('paper white and solid black are printable, obviously', () => {
+  // Both round to a chroma of ~1e-8 against a limit of ~1e-8. Without an
+  // epsilon this reports the background colour of every light system as a
+  // print defect.
+  for (const hex of ['#ffffff', '#000000', '#fefefe', '#010101']) {
+    ok(printShift(hex).inGamut, `${hex} was called unprintable`);
+  }
+});
+
+t('acid colours are out of gamut and muted ones are not', () => {
+  for (const hex of ['#00ffcc', '#7fff00', '#ff00ff']) {
+    ok(!printShift(hex).inGamut, `${hex} should be unprintable`);
+  }
+  for (const hex of ['#4a6fa5', '#8a8577', '#2b4c3f']) {
+    ok(printShift(hex).inGamut, `${hex} should print fine`);
+  }
+});
+
+t('the printable substitute is always inside the gamut it was pulled into', () => {
+  for (const hex of ['#00ffcc', '#ff00ff', '#7fff00', '#ffff00']) {
+    const near = printShift(hex).as;
+    // Allow a hair of slack for the sRGB clamp on the way back out.
+    const [L, C, h] = hexToOklch(near);
+    ok(C <= maxPrintableChroma(h, L) + 0.01, `${hex} → ${near} is still outside`);
+  }
+});
+
+t('nothing generated exceeds the ink limit', () => {
+  for (const v of VIBE_NAMES) {
+    for (const dark of [false, true]) {
+      const sys = system('ink', { vibe: v, dark });
+      for (const hex of Object.values(sys.colour).filter((x) => typeof x === 'string')) {
+        ok(checkPrint(hex).coverage <= 300, `${hex} in ${v} is ${checkPrint(hex).coverage}% ink`);
+      }
+    }
+  }
+});
+
+// --- the fixer --------------------------------------------------------------
+
+t('a passing pairing is returned untouched', () => {
+  const r = fixContrast('#000000', '#ffffff');
+  eq(r.changed, false);
+  eq(r.to, '#000000');
+});
+
+t('the fix actually clears the target it was given', () => {
+  const cases = [['#8ab4f8', '#ffffff'], ['#cccccc', '#dddddd'], ['#e4002b', '#000000'], ['#777777', '#ffffff']];
+  for (const [fg, bg] of cases) {
+    for (const target of [3, 4.5, 7]) {
+      const r = fixContrast(fg, bg, { target });
+      if (r.impossible) continue;
+      ok(contrast(r.to, bg) >= target, `${fg} on ${bg} → ${r.to} is ${contrast(r.to, bg).toFixed(2)}, needed ${target}`);
+    }
+  }
+});
+
+t('the fix keeps the hue — it is still your colour', () => {
+  const r = fixContrast('#8ab4f8', '#ffffff');
+  const before = hexToOklch('#8ab4f8')[2];
+  const after = hexToOklch(r.to)[2];
+  ok(Math.abs(((before - after + 540) % 360) - 180) < 6, `hue moved from ${before.toFixed(0)}° to ${after.toFixed(0)}°`);
+});
+
+t('the fix moves the text by default, not the background', () => {
+  // Getting this backwards silently returns greys, which looks like it works.
+  eq(fixContrast('#8ab4f8', '#ffffff').from, '#8ab4f8');
+  eq(fixContrast('#8ab4f8', '#ffffff', { move: 'bg' }).from, '#ffffff');
+});
+
+t('the fix takes the shortest route, not the obvious one', () => {
+  const r = fixContrast('#777777', '#ffffff');
+  ok(r.moved <= 0.02, `moved ${r.moved} to fix a pairing that was 0.02 short`);
+});
+
+// --- the roast --------------------------------------------------------------
+
+t('a good palette is not roasted', () => {
+  const r = roast(['#ffffff', '#1a1a1a', '#4a5568', '#2b6cb0'], { fonts: ['Inter', 'Georgia'], radii: ['4px', '8px'] });
+  eq(r.score, 100);
+});
+
+t('every burn is earned from a measurement, not a mood', () => {
+  const r = roast(['#ffffff', '#f8f8f8']);
+  // One finding: unreadable text. Not a generic insult.
+  ok(r.burns.every((b) => b.severity === 0 || b.evidence || b.fix), 'a burn arrived with no evidence attached');
+});
+
+t('the roast is deterministic', () => {
+  const args = ['#ffffff', '#f8f8f8', '#00ffcc'];
+  eq(JSON.stringify(roast(args)), JSON.stringify(roast(args)));
+});
+
+// --- moods and hats ---------------------------------------------------------
+
+t('a mood changes the expression and nothing else about the person', () => {
+  // The seeded stream must not shift, or you get a different person per mood.
+  const hairOf = (svg) => (svg.match(/<path d="M(?:29|30|50) [^"]*" fill="#[0-9a-f]{6}"\/>/) || [''])[0];
+  for (const style of MOOD_STYLES) {
+    const base = avatar('mood-test', { style });
+    for (const m of MOODS) {
+      const withMood = avatar('mood-test', { style, mood: m });
+      eq(hairOf(withMood), hairOf(base), `${style} + ${m} changed the hair`);
+    }
+  }
+});
+
+t('every mood produces a different face', () => {
+  const seen = new Set(MOODS.map((m) => avatar('m', { style: 'face', mood: m })));
+  eq(seen.size, MOODS.length, 'two moods rendered identically');
+});
+
+// Clip ids vary with the render options by design, so compare the artwork.
+const artwork = (svg) => svg.replace(/c[a-z0-9]+/g, 'ID');
+
+t('every hat lands on a head, and none is drawn on a style without one', () => {
+  for (const hat of HATS.filter((h) => h !== 'none')) {
+    ok(avatar('h', { style: 'face', hat }) !== avatar('h', { style: 'face' }), `${hat} did nothing on a face`);
+    // Abstract styles have no head, so a hat must be a no-op rather than a
+    // shape floating in the corner.
+    eq(artwork(avatar('h', { style: 'pixel', hat })), artwork(avatar('h', { style: 'pixel' })), `${hat} appeared on a pixel avatar`);
+  }
+});
+
+t('the seasonal hat is a suggestion, never applied on its own', () => {
+  eq(artwork(avatar('s', { style: 'face' })), artwork(avatar('s', { style: 'face', hat: 'none' })));
+  ok(HATS.includes(seasonalHat(new Date('2026-12-25'))));
+  ok(HATS.includes(seasonalHat(new Date('2026-07-04'))));
+});
+
+// --- personas ---------------------------------------------------------------
+
+t('a persona is the same person forever', () => {
+  const a = persona('mo');
+  const b = persona('mo');
+  eq(a.name, b.name);
+  eq(a.archetype, b.archetype);
+  eq(a.colour, b.colour);
+  eq(a.bio, b.bio);
+});
+
+t("a persona's name and handle describe the same person", () => {
+  for (const s of ['a', 'b', 'c', 'd', 'e']) {
+    const p = persona(s);
+    const fromName = p.name.toLowerCase().replace(/[^a-z]/g, '');
+    const fromHandle = p.handle.slice(1).replace(/[^a-z]/g, '');
+    eq([...fromName].sort().join(''), [...fromHandle].sort().join(''), `${p.name} vs ${p.handle}`);
+  }
+});
+
+t('a cast is visually distinct, which is the only reason it exists', () => {
+  const people = cast(['ada', 'grace', 'linus', 'radia', 'katherine']);
+  const hues = people.map((p) => hexToOklch(p.colour)[2]);
+  for (let i = 0; i < hues.length; i++) {
+    for (let j = i + 1; j < hues.length; j++) {
+      const gap = Math.abs(((hues[i] - hues[j] + 540) % 360) - 180);
+      ok(gap > 18, `${people[i].name} and ${people[j].name} are ${gap.toFixed(0)}° apart`);
+    }
+  }
+});
+
+t('a cast keeps every name and handle in sync too', () => {
+  for (const p of cast(['ada', 'grace', 'linus'])) {
+    const fromName = p.name.toLowerCase().replace(/[^a-z]/g, '');
+    const fromHandle = p.handle.slice(1).replace(/[^a-z]/g, '');
+    eq([...fromName].sort().join(''), [...fromHandle].sort().join(''), `${p.name} vs ${p.handle}`);
+  }
+});
+
+t("a persona's system passes its own audit, brand lock and all", () => {
+  for (const a of ARCHETYPES) {
+    for (const dark of [false, true]) {
+      const p = persona('audit-me', { archetype: a.key, dark });
+      ok(audit(p.system).passed, `${a.key}${dark ? ' dark' : ''}`);
+    }
+  }
+});
+
+t('a social card has nothing in it that can fail to load', () => {
+  const svg = card(persona('mo'), { tagline: 'made with notugly' });
+  ok(!/<script|<image|xlink:|href=/.test(svg), 'the card reaches outside itself');
+  // url() is allowed only for the clip path it defines inline.
+  for (const ref of svg.match(/url\([^)]*\)/g) || []) {
+    ok(/^url\(#/.test(ref) && svg.includes(`id="${ref.slice(5, -1)}"`), `${ref} points somewhere else`);
+  }
+  ok(svg.startsWith('<svg') && svg.trimEnd().endsWith('</svg>'));
+});
+
+t('the face on a card fills its frame instead of sitting in it as a speck', () => {
+  // Avatars are drawn in a 0-100 viewBox. Strip the <svg> wrapper to compose
+  // one and the viewBox mapping goes with it — the drawing silently renders at
+  // a fraction of the size, which looks like a styling problem and is not one.
+  const svg = card(persona('mo'));
+  const clipR = Number(svg.match(/<clipPath id="pc"><circle cx="\d+" cy="\d+" r="(\d+)"/)[1]);
+  const scale = Number(svg.match(/<g transform="scale\(([\d.]+)\)">/)[1]);
+  eq(scale * 100, clipR * 2, 'the drawing is not scaled to the circle that clips it');
+});
+
+t('a long name does not run off the edge of the card', () => {
+  const svg = card(persona('x', { name: 'Bartholomew Featherstonehaugh-Cholmondeley' }));
+  const size = Number(svg.match(/font-size="(\d+)" font-weight="700"/)[1]);
+  ok(size < 76, `title stayed at ${size}px and will overflow`);
+});
+
+t('an identity kit contains every asset it claims to', () => {
+  const kit = identityKit(persona('mo'));
+  for (const k of ['favicon', 'small', 'medium', 'large']) ok(kit.avatars[k], `missing ${k}`);
+  ok(kit.card.includes('<svg'));
+  ok(kit.faviconSquare.includes('<svg'));
+  ok(kit.css.includes('--persona:'));
+});
+
+t('a persona reads as coherent: the archetype picks the face and the vibe', () => {
+  for (const a of ARCHETYPES) {
+    const p = persona('coherence', { archetype: a.key });
+    ok(a.styles.includes(p.style), `${a.key} got a ${p.style}`);
+    ok(STYLES.includes(p.style), `${p.style} is not a real style`);
+  }
+});
+
+// --- the mascot -------------------------------------------------------------
+
+t('the mascot renders in every state and moves something each time', () => {
+  const sys = system('mascot');
+  const seen = new Set(MASCOT_STATES.map((s) => mascot(sys.colour, { state: s })));
+  eq(seen.size, MASCOT_STATES.length, 'two states looked identical');
+});
+
+t('the mascot exposes the ids the page animates', () => {
+  const svg = mascot(system('m').colour);
+  for (const id of ['nu-mascot-pupils', 'nu-mascot-mouth', 'nu-mascot-brows']) {
+    ok(svg.includes(`id="${id}"`), `missing #${id} — the page would re-serialise on every mousemove`);
+  }
+});
+
+t('the mascot borrows the current system rather than hard-coding colours', () => {
+  const a = mascot(system('one', { vibe: 'brutalist' }).colour);
+  const b = mascot(system('one', { vibe: 'terminal', dark: true }).colour);
+  ok(a !== b, 'the mascot ignored the system it was given');
+});
+
+t('every mascot reaction maps to a real state with a real line', () => {
+  for (const e of ['reroll', 'audit', 'export', 'hover', 'idle-long', 'nonsense']) {
+    const s = reactTo(e, { passed: true });
+    ok(MASCOT_STATES.includes(s), `${e} → ${s}`);
+    ok(quip(s).length > 0, `${s} has nothing to say`);
+  }
+});
+
+// --- brand lock -------------------------------------------------------------
+
+t('a locked brand colour is used exactly as given', () => {
+  for (const brand of ['#e4002b', '#1db954', '#ff9900', '#0057b8']) {
+    eq(system('lock', { brand }).brandLocked, brand);
+  }
+});
+
+t('locking a brand never breaks the audit', () => {
+  const brands = ['#e4002b', '#1db954', '#ff9900', '#0057b8', '#000000', '#ffe600', '#7b2ff7', '#00d4ff'];
+  for (const brand of brands) {
+    for (const v of VIBE_NAMES) {
+      for (const dark of [false, true]) {
+        ok(audit(system('lock', { vibe: v, dark, brand })).passed, `${brand} ${v}${dark ? ' dark' : ''}`);
+      }
+    }
+  }
+});
+
+t('a locked brand actually steers the palette', () => {
+  const red = system('same-seed', { brand: '#e4002b' });
+  const green = system('same-seed', { brand: '#1db954' });
+  ok(red.colour.brand !== green.colour.brand, 'the lock was ignored');
+});
+
+// --- Figma and VS Code ------------------------------------------------------
+
+t('the Figma plugin is valid JSON with the fields Figma requires', () => {
+  const f = toFigma(system('mo'));
+  const m = JSON.parse(f['manifest.json']);
+  for (const key of ['name', 'id', 'api', 'main', 'editorType']) ok(m[key], `manifest missing ${key}`);
+  eq(m.main, 'code.js');
+  ok(f['code.js'].includes('figma.variables.createVariableCollection'));
+});
+
+t('Figma colours are 0-1 floats, not hex, which catches everyone out once', () => {
+  const code = toFigma(system('mo'))['code.js'];
+  const colours = JSON.parse(code.slice(code.indexOf('const COLOURS = ') + 16, code.indexOf(';\n\nconst NUMBERS')));
+  for (const [name, v] of Object.entries(colours)) {
+    for (const ch of ['r', 'g', 'b']) {
+      ok(typeof v[ch] === 'number' && v[ch] >= 0 && v[ch] <= 1, `${name}.${ch} is ${v[ch]}`);
+    }
+  }
+});
+
+t('the VS Code theme is valid JSON and every colour is a real hex', () => {
+  const v = toVsCode(system('mo', { dark: true }));
+  JSON.parse(v['package.json']);
+  const theme = JSON.parse(v['themes/notugly-color-theme.json']);
+  for (const [k, val] of Object.entries(theme.colors)) {
+    ok(/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(val), `${k} is ${val}`);
+  }
+});
+
+t('the editor theme holds notugly to its own promise', () => {
+  // If the generated theme has unreadable syntax colours, the claim is a lie
+  // everywhere it is easiest to notice.
+  for (const v of VIBE_NAMES) {
+    for (const dark of [false, true]) {
+      const theme = JSON.parse(toVsCode(system('mo', { vibe: v, dark }))['themes/notugly-color-theme.json']);
+      const bg = theme.colors['editor.background'];
+      for (const tc of theme.tokenColors) {
+        const ratio = contrast(tc.settings.foreground, bg);
+        ok(ratio >= 4.5, `${v}${dark ? ' dark' : ''} ${tc.scope[0]} is ${ratio.toFixed(2)}:1 on ${bg}`);
+      }
+    }
+  }
+});
+
+t('the theme uses distinct colours per token type', () => {
+  const theme = JSON.parse(toVsCode(system('mo', { dark: true }))['themes/notugly-color-theme.json']);
+  const used = new Set(theme.tokenColors.map((t) => t.settings.foreground));
+  ok(used.size >= 5, `only ${used.size} distinct syntax colours — every token type looks the same`);
+});
+
+// --- the new characters -----------------------------------------------------
+
+t('every style still renders, including the new ones', () => {
+  for (const s of STYLES) {
+    const svg = avatar('render-all', { style: s, label: 'render-all' });
+    ok(svg.startsWith('<svg') && svg.trimEnd().endsWith('</svg>'), s);
+    ok(!/undefined|NaN|\[object/.test(svg), `${s} rendered a hole`);
+  }
+});
+
+t('no avatar reaches outside itself for an asset', () => {
+  for (const s of STYLES) {
+    ok(!/<script|<image|xlink:|href=/.test(avatar('x', { style: s })), s);
+  }
+});
+
+t('a pair avatar contains two characters, not one scaled up', () => {
+  const svg = avatar('two', { style: 'duo' });
+  eq((svg.match(/<g transform="translate\(\d+ \d+\) scale/g) || []).length, 2);
+});
+
+t('creatures stay inside the frame', () => {
+  // Anything drawn past the viewBox gets clipped into a shape nobody designed.
+  for (const s of ['dog', 'duck', 'capybara', 'monster', 'object', 'line']) {
+    for (let i = 0; i < 40; i++) {
+      const svg = avatar(`frame-${i}`, { style: s });
+      // Read the geometry attributes only. Scanning the whole string picks up
+      // the 2000 in the xmlns URL, the digits inside #00a651, and the hash in
+      // a clip-path id — none of which are coordinates.
+      const coords = [...svg.matchAll(/\s(?:d|points|cx|cy|rx|ry|r|x|y|x1|y1|x2|y2)="([^"]*)"/g)]
+        .flatMap(([, v]) => [...v.matchAll(/-?\d+(?:\.\d+)?/g)].map(Number));
+      ok(Math.max(...coords) < 130, `${s} seed ${i} drew at ${Math.max(...coords)}`);
+    }
+  }
 });
 
 // ---------------------------------------------------------------------------

@@ -25,9 +25,10 @@
     <a href="#make">Make</a>
     <a href="#preview">Preview</a>
     <a href="#avatars">Avatars</a>
+    <a href="#personas">Personas</a>
+    <a href="#judge">Judge</a>
     <a href="#chaos">Chaos</a>
     <a href="#export">Export</a>
-    <a href="#gallery">Gallery</a>
   </div>
   <a class="btn ghost" href="https://github.com/mohitagw15856/notugly">GitHub ↗</a>
 </nav>
@@ -51,6 +52,13 @@
   </div>
 
   <p class="hint" id="hint"></p>
+
+  <!-- He borrows the current system's colours, so he re-skins with the page.
+       His eyes follow the pointer; app.js moves the pupils only. -->
+  <div class="mascotwrap" id="mascotwrap">
+    <div id="mascot"></div>
+    <p class="quip" id="mascot-quip" aria-live="polite"></p>
+  </div>
 </header>
 
 <main>
@@ -116,8 +124,9 @@
 <section id="avatars" class="reveal">
   <h2><span class="tag">03</span> Avatars</h2>
   <p class="lede">
-    Deterministic from a name, so a person's face never changes. Eight styles,
-    and <em>the contrast is checked against the page behind it</em> — which is the
+    Deterministic from a name, so a person's face never changes. Twenty styles —
+    pencil people, characters defined entirely by their glasses, a capybara —
+    and <em>the contrast is checked against the page behind it</em>, which is the
     bit that makes them actually usable.
   </p>
 
@@ -126,11 +135,113 @@
     <div class="chips" id="avstyles"></div>
   </div>
   <div class="avgrid" id="avgrid"></div>
+
+  <div class="remix panel">
+    <h3>Remix</h3>
+    <p class="fine">
+      Nudge one thing instead of rerolling the whole person. The face underneath
+      never changes — that is the point.
+    </p>
+    <div class="remixrow">
+      <label>mood <div class="chips sm" id="avmoods"></div></label>
+      <label>hat <div class="chips sm" id="avhats"></div></label>
+    </div>
+    <div class="moodstrip" id="moodstrip"></div>
+  </div>
+</section>
+
+<!-- ---------------------------------------------------------------- -->
+<section id="personas" class="reveal">
+  <h2><span class="tag">04</span> Personas</h2>
+  <p class="lede">
+    A face is not a presence. <em>A presence is a face, a name, a way of talking
+    and a colour that is yours</em> — and those four agreeing is what makes
+    something feel like somebody. So all of it comes from one seed.
+  </p>
+
+  <div class="avbar">
+    <input id="pname" value="mo" autocomplete="off" aria-label="Name for the persona">
+    <button id="preroll" class="btn sm">Reroll</button>
+    <div class="chips sm" id="parchetypes"></div>
+  </div>
+
+  <div class="personabox" id="personabox"></div>
+
+  <h3 class="sub">Their social card</h3>
+  <p class="fine">
+    1200×630 — the size every platform crops to. No webfonts, no images, nothing
+    that can 404 in someone else's preview crawler.
+  </p>
+  <div class="cardbox" id="cardbox"></div>
+  <div class="row">
+    <button id="dlcard" class="btn sm">Download card</button>
+    <button id="dlkit" class="btn sm">Download identity kit</button>
+  </div>
+
+  <h3 class="sub">A whole cast</h3>
+  <p class="fine">
+    Generate a team one at a time and you get four people who are all teal. These
+    are picked to be as far from each other as possible.
+  </p>
+  <div class="castgrid" id="castgrid"></div>
+</section>
+
+<!-- ---------------------------------------------------------------- -->
+<section id="judge" class="reveal">
+  <h2><span class="tag">05</span> Judgement</h2>
+  <p class="lede">
+    Four things every other generator leaves to you: whether it survives colour
+    blindness, whether it survives a printer, what the newer contrast model
+    thinks, and <em>how to fix the pairing you already picked</em>.
+  </p>
+
+  <div class="judgegrid">
+    <div class="panel">
+      <h3>Fix a pairing</h3>
+      <p class="fine">The nearest passing colour to the one you chose. Same hue, same chroma.</p>
+      <div class="fixbar">
+        <input id="fixfg" value="#8ab4f8" aria-label="Foreground colour" spellcheck="false">
+        <span class="fine">on</span>
+        <input id="fixbg" value="#ffffff" aria-label="Background colour" spellcheck="false">
+      </div>
+      <div id="fixout"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Colour vision</h3>
+      <p class="fine">
+        Real cone-response matrices, not a hue-rotate. A filter chain moves colours
+        roughly the right way and gets the actual confusions wrong.
+      </p>
+      <div id="visionout"></div>
+    </div>
+
+    <div class="panel">
+      <h3>On paper</h3>
+      <p class="fine">Which of these do not exist in CMYK.</p>
+      <div id="printout"></div>
+    </div>
+
+    <div class="panel">
+      <h3>The roast</h3>
+      <p class="fine">Paste some colours. Be told off, specifically.</p>
+      <textarea id="roastin" rows="2" spellcheck="false" aria-label="Colours to roast">#ffffff #f8f8f8 #f2f2f2 #00ffcc #ff00ff #ffff00</textarea>
+      <button id="roastgo" class="btn sm">Judge me</button>
+      <div id="roastout"></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Which do you prefer?</h3>
+  <p class="fine">
+    Two systems, no labels. Pick one and it keeps the winner's traits and rerolls
+    the rest — twenty clicks and it has found what you like.
+  </p>
+  <div class="battle" id="battle"></div>
 </section>
 
 <!-- ---------------------------------------------------------------- -->
 <section id="chaos" class="reveal">
-  <h2><span class="tag">04</span> The chaos test</h2>
+  <h2><span class="tag">06</span> The chaos test</h2>
   <p class="lede">
     Design systems are demonstrated with three words of Latin and a square
     photograph. <em>Real content is not like that.</em> Here is the same system
@@ -142,8 +253,8 @@
 
 <!-- ---------------------------------------------------------------- -->
 <section id="export" class="reveal">
-  <h2><span class="tag">05</span> Take it</h2>
-  <p class="lede">Six formats. The byte count is next to each one, because nobody else will tell you.</p>
+  <h2><span class="tag">07</span> Take it</h2>
+  <p class="lede">Eight formats, including a loadable Figma plugin and a VS Code theme. The byte count is next to each one, because nobody else will tell you.</p>
 
   <div class="tabs" id="export-tabs"></div>
   <div class="exportbox">
@@ -160,7 +271,7 @@
 
 <!-- ---------------------------------------------------------------- -->
 <section id="gallery" class="reveal">
-  <h2><span class="tag">06</span> Seeds worth stealing</h2>
+  <h2><span class="tag">08</span> Seeds worth stealing</h2>
   <p class="lede">Every design here is a link. Click one and the page becomes it.</p>
   <div class="gallery" id="gallery-grid"></div>
 </section>
@@ -172,6 +283,10 @@
   <p class="fine">
     MIT. Zero dependencies. <a href="https://github.com/mohitagw15856/notugly">Source</a> ·
     <a href="https://www.npmjs.com/package/notugly">npm</a>
+  </p>
+  <p class="fine keys">
+    <kbd>R</kbd> reroll · <kbd>D</kbd> dark · <kbd>←</kbd><kbd>→</kbd> vibe ·
+    <kbd>E</kbd> export · <kbd>P</kbd> persona · <kbd>?</kbd> this list
   </p>
 </footer>
 

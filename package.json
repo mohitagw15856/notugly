@@ -1,7 +1,7 @@
 {
   "name": "notugly",
-  "version": "0.1.0",
-  "description": "Designs that are provably not ugly. Generate a whole design system from a seed — every text pairing clears WCAG AA before you see it. Export CSS, Tailwind, tokens, React, Svelte or HTML. Zero dependencies, zero runtime.",
+  "version": "0.2.0",
+  "description": "Designs that are provably not ugly. Generate a whole design system from a seed — every text pairing clears WCAG AA before you see it. Twenty avatar styles, whole generated personas, and exports to CSS, Tailwind, tokens, React, Svelte, HTML, Figma and VS Code. Zero dependencies, zero runtime.",
   "type": "module",
   "bin": { "notugly": "bin/notugly.mjs" },
   "exports": {
@@ -9,7 +9,15 @@
     "./avatar": "./lib/avatar.mjs",
     "./color": "./lib/color.mjs",
     "./export": "./lib/export.mjs",
-    "./seed": "./lib/seed.mjs"
+    "./seed": "./lib/seed.mjs",
+    "./persona": "./lib/persona.mjs",
+    "./mascot": "./lib/mascot.mjs",
+    "./vision": "./lib/vision.mjs",
+    "./apca": "./lib/apca.mjs",
+    "./print": "./lib/print.mjs",
+    "./fix": "./lib/fix.mjs",
+    "./roast": "./lib/roast.mjs",
+    "./targets": "./lib/targets.mjs"
   },
   "files": ["bin/", "lib/", "LICENSE"],
   "scripts": {
@@ -23,7 +31,9 @@
     "design-system", "avatar", "avatars", "color-palette", "colour",
     "accessibility", "wcag", "contrast", "generator", "oklch", "oklab",
     "design-tokens", "tailwind", "css-variables", "svg", "zero-dependency",
-    "ui", "theme", "gradient", "not-ugly"
+    "ui", "theme", "gradient", "not-ugly",
+    "persona", "identity", "apca", "color-blindness", "figma", "vscode-theme",
+    "og-image", "cmyk", "profile-picture", "pfp"
   ],
   "author": "Mohit (mohitagw15856)",
   "license": "MIT",
