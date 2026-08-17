@@ -43,6 +43,7 @@ import { iconPackage, ICON_SIZES } from '../lib/icon.mjs';
 import { checkSystemRtl } from '../lib/rtl.mjs';
 import { accessibilityStatement } from '../lib/statement.mjs';
 import { benchmark } from '../lib/benchmark.mjs';
+import { brandSet, brandDistinct } from '../lib/brand.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 
 const argv = process.argv.slice(2);
@@ -125,6 +126,7 @@ ${dim('for keeping it')}
   ${bold('notugly tokens')} <file.json>        audit somebody else's tokens or Figma export
   ${bold('notugly storybook')} [seed]          a Storybook story for the system
   ${bold('notugly team')} <org> <who...>       one seed, a whole company
+  ${bold('notugly brands')} <seed> <#hex...>   one product, several client brand colours, checked apart
 
 ${dim('options')}  --vibe ${VIBE_NAMES.join('|')}   --dark   --style ${STYLES.slice(0, 4).join('|')}…
          --out <dir>   --size <px>   --seed <seed>   --brand <#hex>
@@ -1056,6 +1058,45 @@ function cmdTeam(args) {
   console.log();
 }
 
+// --- whitelabel / multi-brand ------------------------------------------------
+function cmdBrands(args) {
+  const positional = args.filter((a) => !a.startsWith('--') && !a.startsWith('#'));
+  const hexes = args.filter((a) => a.startsWith('#'));
+  const seed = positional[0];
+  if (!seed || hexes.length < 2) {
+    console.error('Try: notugly brands acme "#e4002b" "#0057ff" "#00a86b"');
+    process.exit(2);
+  }
+  const result = brandSet(seed, hexes, { vibe: flag('vibe', 'editorial'), dark: has('dark') });
+  const check = brandDistinct(result);
+  if (wantsJson()) return printJson({ ...result, distinct: check });
+
+  console.log(`\n  ${bold(seed)}  ${dim(`${hexes.length} brands, one system`)}\n`);
+  for (const t of result.tenants) {
+    console.log(
+      `  ${swatch(t.brand, 4)} ${t.brand.padEnd(9)} ${t.audit.passed ? c(32, '✓') : c(31, '✗')} ${dim(`weakest ${t.audit.weakest.ratio}:1`)}`
+    );
+  }
+  console.log(`\n  ${check.passed ? c(32, '✓ no two brand colours collapse into each other') : c(33, `! ${check.clashes.length} pair(s) are close in hue`)}`);
+  for (const cl of check.clashes) console.log(`    ${cl.a} + ${cl.b}  ${dim(`${cl.degrees}° apart`)}`);
+
+  const out = flag('out', null);
+  if (out) {
+    for (const t of result.tenants) {
+      const dir = `${out}/${t.brand.replace('#', '')}`;
+      const e = exportAll(t.system);
+      for (const [f, body] of Object.entries(e.files)) {
+        const path = `${dir}/${f}`;
+        mkdirSync(path.split('/').slice(0, -1).join('/'), { recursive: true });
+        writeFileSync(path, body);
+      }
+    }
+    console.log(`\n  Wrote a full export per brand to ${bold(out)}  ${dim(`${result.tenants.length} tenants`)}\n`);
+    return;
+  }
+  console.log(`\n  ${dim(`notugly brands ${seed} ${hexes.join(' ')} --out ./tenants  writes a full export per brand`)}\n`);
+}
+
 // ---------------------------------------------------------------------------
 const cmd = argv[0];
 if (argv.includes('--help') || argv.includes('-h')) usage(0);
@@ -1149,6 +1190,9 @@ switch (cmd) {
     break;
   case 'team':
     cmdTeam(argv.slice(1));
+    break;
+  case 'brands':
+    cmdBrands(argv.slice(1));
     break;
   case 'glass':
     cmdGlass(argv.slice(1));

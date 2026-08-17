@@ -42,6 +42,7 @@ import { glyphFor } from '../lib/font5x7.mjs';
 import { checkRtl, checkSystemRtl } from '../lib/rtl.mjs';
 import { accessibilityStatement } from '../lib/statement.mjs';
 import { benchmark, APPROACHES } from '../lib/benchmark.mjs';
+import { brandSet, brandDistinct } from '../lib/brand.mjs';
 
 let pass = 0;
 const fails = [];
@@ -1407,6 +1408,31 @@ t('notugly is the only zero-kilobyte row, and every row explains itself', () => 
   ok(b.rows.filter((r) => r !== nu).every((r) => r.runtimeKb > 0), 'every alternative should carry a real cost');
   ok(b.rows.every((r) => r.note.length > 20), 'every row needs an actual explanation, not just a number');
   eq(APPROACHES.length, b.rows.length);
+});
+
+// --- whitelabel / multi-brand ------------------------------------------------
+t('every tenant keeps its exact locked brand colour and still passes its own audit', () => {
+  const hexes = ['#e4002b', '#0057ff', '#00a86b'];
+  const result = brandSet('acme', hexes);
+  eq(result.tenants.length, 3);
+  for (let i = 0; i < hexes.length; i++) {
+    eq(result.tenants[i].system.colour.primary[6] !== undefined, true);
+    ok(result.tenants[i].audit.passed, `tenant ${hexes[i]} should still pass its own audit`);
+  }
+});
+t('tenants share type, radius and motion — only the brand colour differs', () => {
+  const result = brandSet('acme', ['#e4002b', '#0057ff']);
+  const [a, b] = result.tenants;
+  eq(a.system.type.pairing.name, b.system.type.pairing.name);
+  eq(a.system.radius.md, b.system.radius.md);
+  eq(a.system.motion.name, b.system.motion.name);
+  ok(a.system.colour.brand !== b.system.colour.brand || a.brand !== b.brand);
+});
+t('brandDistinct flags two brand colours close enough to be mistaken for one', () => {
+  const clashing = brandSet('acme', ['#e4002b', '#e50228']); // nearly identical red
+  ok(!brandDistinct(clashing).passed, 'near-identical reds should clash');
+  const distinct = brandSet('acme', ['#e4002b', '#0057ff', '#00a86b']);
+  ok(brandDistinct(distinct).passed, 'red/blue/green should not clash');
 });
 
 // ---------------------------------------------------------------------------
