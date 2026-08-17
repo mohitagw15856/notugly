@@ -40,6 +40,8 @@ import { blob, divider, DIVIDERS } from '../lib/shape.mjs';
 import { paletteFromImage, paletteFromImages } from '../lib/quantise.mjs';
 import { decodePng } from '../lib/raster.mjs';
 import { iconPackage, ICON_SIZES } from '../lib/icon.mjs';
+import { checkSystemRtl } from '../lib/rtl.mjs';
+import { accessibilityStatement } from '../lib/statement.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 
 const argv = process.argv.slice(2);
@@ -90,6 +92,8 @@ function usage(code = 0) {
   ${bold('notugly shape')} <kind>              a blob or a section divider
   ${bold('notugly palette')} <img.png...>      the colours in a photograph, no browser needed
   ${bold('notugly icon')} <name>               a favicon + app-icon package, real PNG/ICO pixels
+  ${bold('notugly rtl')} [seed]                scans the generated CSS for left/right that should be logical
+  ${bold('notugly a11y-statement')} [seed]      a publishable statement — what conforms, what wasn't checked
 
 ${dim('for the people who have to present it')}
   ${bold('notugly spec')} <url>                what is that design made of, as a table
@@ -452,6 +456,45 @@ function cmdIcon(args) {
   mkdirSync(out, { recursive: true });
   for (const [f, body] of Object.entries(pkg.files)) writeFileSync(`${out}/${f}`, body);
   console.log(`\n  Wrote ${bold(String(Object.keys(pkg.files).length))} files to ${bold(out)}\n`);
+}
+
+// --- right to left -------------------------------------------------------------
+function cmdRtl(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const report = checkSystemRtl(sys);
+
+  console.log(`\n  ${bold('RTL readiness')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
+  for (const r of report.results) {
+    if (!r.findings.length) {
+      console.log(`  ${c(32, '✓')} ${r.label}  ${dim('no physical left/right — margin, padding, border and text-align are all logical')}`);
+      continue;
+    }
+    console.log(`  ${c(31, '✗')} ${r.label}`);
+    for (const f of r.findings) console.log(`      ${dim(f.says)}`);
+  }
+
+  const sample = CASES.find((x) => x.id === 'rtl');
+  console.log(`\n  ${dim('Sample text')}  ${sample.text}`);
+  console.log(`  ${dim(sample.why)}`);
+  console.log(`\n  ${dim('This checks the generated stylesheet for physical properties — it cannot see a mirrored layout you wrote by hand.')}\n`);
+  if (!report.passed && has('strict')) process.exit(1);
+}
+
+// --- accessibility statement ---------------------------------------------------
+function cmdStatement(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const stmt = accessibilityStatement(sys, { org: flag('org', null), url: flag('url', null), contact: flag('contact', null) });
+  const out = flag('out', null);
+
+  if (out) {
+    writeFileSync(out, out.endsWith('.html') ? stmt.html : stmt.markdown);
+    console.log(`\n  Wrote ${bold(out)}\n`);
+    return;
+  }
+  console.log(`\n${stmt.markdown}\n`);
+  console.log(`  ${dim(`notugly a11y-statement ${sys.seed} --out statement.html  writes the printable version`)}\n`);
 }
 
 // --- odds and ends ----------------------------------------------------------
@@ -1074,6 +1117,12 @@ switch (cmd) {
     break;
   case 'icon':
     cmdIcon(argv.slice(1));
+    break;
+  case 'rtl':
+    cmdRtl(argv.slice(1));
+    break;
+  case 'a11y-statement':
+    cmdStatement(argv.slice(1));
     break;
   case undefined:
     // No arguments: make something, so the first run shows the product.

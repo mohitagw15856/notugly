@@ -39,6 +39,8 @@ import { glassMaterial, glassLegibility, concentricRadius, squirclePath, WORST_C
 import { encodePng, decodePng, encodeIco } from '../lib/raster.mjs';
 import { iconPixels, iconPackage, ICON_SIZES } from '../lib/icon.mjs';
 import { glyphFor } from '../lib/font5x7.mjs';
+import { checkRtl, checkSystemRtl } from '../lib/rtl.mjs';
+import { accessibilityStatement } from '../lib/statement.mjs';
 
 let pass = 0;
 const fails = [];
@@ -1358,6 +1360,42 @@ t('an icon\'s ink colour clears large-text contrast against its own background',
   // Sample the centre, which the glyph always covers for a letter this size.
   const p = (32 * 64 + 32) * 4;
   ok(px.data[p + 3] === 255, 'centre pixel should be opaque, inside the squircle');
+});
+
+// --- RTL -----------------------------------------------------------------
+t('checkRtl finds physical properties and names their logical equivalent', () => {
+  const r = checkRtl('.x { margin-left: 8px; padding-right: 4px; }');
+  eq(r.passed, false);
+  ok(r.findings.some((f) => f.physical === 'margin-left' && f.logical === 'margin-inline-start'));
+  ok(r.findings.some((f) => f.physical === 'padding-right' && f.logical === 'padding-inline-end'));
+});
+t('checkRtl passes CSS with no physical direction in it', () => {
+  eq(checkRtl('.x { margin-inline: 8px; text-align: start; }').passed, true);
+});
+t('this project\'s own generated CSS and HTML are RTL-clean', () => {
+  for (const v of VIBE_NAMES) {
+    const r = checkSystemRtl(system('rtl-check', { vibe: v }));
+    ok(r.passed, `${v}: ${JSON.stringify(r.results.filter((x) => !x.passed))}`);
+  }
+});
+
+// --- accessibility statement ---------------------------------------------
+t('a passing system gets a statement that claims conformance, with a checkable reason', () => {
+  const stmt = accessibilityStatement(system('stmt'));
+  eq(stmt.passed, true);
+  ok(stmt.level.includes('AA'));
+  ok(stmt.markdown.includes('conforms to'));
+  ok(stmt.markdown.includes(String(stmt.weakest.ratio)), 'the claim should cite the actual weakest ratio');
+});
+t('the statement is explicit about what it did not check', () => {
+  const stmt = accessibilityStatement(system('stmt'));
+  ok(stmt.notChecked.length > 0);
+  for (const item of stmt.notChecked) ok(stmt.markdown.includes(item));
+});
+t('the statement HTML is self-contained, like every other document this project prints', () => {
+  const stmt = accessibilityStatement(system('stmt'));
+  ok(stmt.html.includes('@page'));
+  ok(!/<script|src="http|href="http/.test(stmt.html));
 });
 
 // ---------------------------------------------------------------------------
