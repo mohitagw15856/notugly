@@ -22,7 +22,7 @@ import { fixContrast, inspect } from '../lib/fix.mjs';
 import { roast } from '../lib/roast.mjs';
 import { persona, cast, card, identityKit, handle, displayName, ARCHETYPES } from '../lib/persona.mjs';
 import { mascot, MASCOT_STATES, reactTo, quip } from '../lib/mascot.mjs';
-import { toFigma, toVsCode, toIOS, toAndroid, toReactNative, toFlutter, toEmail } from '../lib/targets.mjs';
+import { toFigma, toVsCode, toVsCodeExtension, toIOS, toAndroid, toReactNative, toFlutter, toEmail } from '../lib/targets.mjs';
 import { name as nameColour, nameAll, nearestName } from '../lib/names.mjs';
 import { quantise, paletteFromImage, paletteFromImages, perceptualDistance } from '../lib/quantise.mjs';
 import { specSheet, specMarkdown, compare, onePager, onePagerHtml, costOf } from '../lib/spec.mjs';
@@ -1433,6 +1433,19 @@ t('brandDistinct flags two brand colours close enough to be mistaken for one', (
   ok(!brandDistinct(clashing).passed, 'near-identical reds should clash');
   const distinct = brandSet('acme', ['#e4002b', '#0057ff', '#00a86b']);
   ok(brandDistinct(distinct).passed, 'red/blue/green should not clash');
+});
+
+// --- VS Code extension scaffold ----------------------------------------------
+t('the VS Code extension scaffold is a real 128px icon plus a valid, publisher-flagged package.json', () => {
+  const files = toVsCodeExtension(system('exp'));
+  const pkg = JSON.parse(files['package.json']);
+  eq(pkg.icon, 'icon.png');
+  ok(pkg.publisher, 'package.json must declare a publisher field, even a placeholder one');
+  const icon = decodePng(files['icon.png']);
+  eq(icon.width, 128);
+  eq(icon.height, 128);
+  ok(files['README.md'].includes('publisher'), 'the README should explain the placeholder');
+  ok(files['.vscodeignore'].length > 0);
 });
 
 // ---------------------------------------------------------------------------

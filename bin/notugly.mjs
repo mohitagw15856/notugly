@@ -22,7 +22,7 @@ import { roast } from '../lib/roast.mjs';
 import { checkVision, simulate, VISION } from '../lib/vision.mjs';
 import { printReport } from '../lib/print.mjs';
 import { apcaAdvice } from '../lib/apca.mjs';
-import { toFigma, toVsCode } from '../lib/targets.mjs';
+import { toFigma, toVsCode, toVsCodeExtension } from '../lib/targets.mjs';
 import { specSheet, specMarkdown, compare, compareMarkdown, onePager, onePagerHtml, costOf } from '../lib/spec.mjs';
 import { name as nameColour, nameAll } from '../lib/names.mjs';
 import { toThmx, toSlidesGuide, toSlidesJson, chartLegibility } from '../lib/slides.mjs';
@@ -93,7 +93,7 @@ function usage(code = 0) {
   ${bold('notugly vision')} [seed]             which colours collapse for colour-blind viewers
   ${bold('notugly print')} [seed]              what survives CMYK
   ${bold('notugly figma')} [seed]              a loadable Figma plugin
-  ${bold('notugly vscode')} [seed]             an editor theme from the same system
+  ${bold('notugly vscode')} [seed]             a publishable editor extension — theme, icon, README, changelog
   ${bold('notugly glass')} [seed]              Apple's Liquid Glass, with the legibility actually checked
   ${bold('notugly mascot')} [seed]             the small man who lives on the website, as SVG
   ${bold('notugly gradient')} [seed]           a mesh gradient, as CSS or SVG — never a PNG
@@ -723,7 +723,7 @@ function cmdPrint(args) {
 }
 
 // --- other targets ----------------------------------------------------------
-function cmdTarget(args, name, make, hint) {
+function cmdTarget(args, name, make, hint, cmdName = name.toLowerCase().replace(/\s.*/, '')) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const files = make(sys);
@@ -734,7 +734,7 @@ function cmdTarget(args, name, make, hint) {
       console.log(`  ${f.padEnd(36)} ${dim(`${(Buffer.byteLength(body) / 1024).toFixed(1)} kB`)}`);
     }
     console.log(`\n  ${dim(hint)}`);
-    console.log(`  ${dim(`notugly ${name.toLowerCase().replace(/\s.*/, '')} ${sys.seed} --out ./${name.toLowerCase().split(' ')[0]}  writes them`)}\n`);
+    console.log(`  ${dim(`notugly ${cmdName} ${sys.seed} --out ./${cmdName}  writes them`)}\n`);
     return;
   }
   for (const [f, body] of Object.entries(files)) {
@@ -1145,7 +1145,7 @@ switch (cmd) {
     cmdTarget(argv.slice(1), 'Figma plugin', toFigma, 'Plugins → Development → Import plugin from manifest.');
     break;
   case 'vscode':
-    cmdTarget(argv.slice(1), 'VS Code theme', toVsCode, 'Drop it in ~/.vscode/extensions and restart.');
+    cmdTarget(argv.slice(1), 'VS Code extension', toVsCodeExtension, "A publishable scaffold — set 'publisher' in package.json, then vsce package.", 'vscode');
     break;
   case 'spec':
     await cmdSpec(argv.slice(1));
