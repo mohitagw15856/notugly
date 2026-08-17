@@ -37,6 +37,9 @@ import { mascot, MASCOT_STATES } from '../lib/mascot.mjs';
 import { gradient, KINDS as GRADIENT_KINDS } from '../lib/gradient.mjs';
 import { pattern, PATTERNS } from '../lib/pattern.mjs';
 import { blob, divider, DIVIDERS } from '../lib/shape.mjs';
+import { paletteFromImage, paletteFromImages } from '../lib/quantise.mjs';
+import { decodePng } from '../lib/raster.mjs';
+import { iconPackage, ICON_SIZES } from '../lib/icon.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 
 const argv = process.argv.slice(2);
@@ -85,6 +88,8 @@ function usage(code = 0) {
   ${bold('notugly gradient')} [seed]           a mesh gradient, as CSS or SVG — never a PNG
   ${bold('notugly pattern')} <name>            grain, dots, grid, lines… as a data URI
   ${bold('notugly shape')} <kind>              a blob or a section divider
+  ${bold('notugly palette')} <img.png...>      the colours in a photograph, no browser needed
+  ${bold('notugly icon')} <name>               a favicon + app-icon package, real PNG/ICO pixels
 
 ${dim('for the people who have to present it')}
   ${bold('notugly spec')} <url>                what is that design made of, as a table
@@ -380,6 +385,73 @@ function cmdShape(args) {
   if (out) { writeFileSync(out, d.svg); console.log(`\n  Wrote ${bold(out)}\n`); return; }
   console.log(d.svg);
   console.log(`\n  ${dim(`notugly shape ${DIVIDERS.join('|')}|blob --out shape.svg`)}\n`);
+}
+
+// --- palette from an image ---------------------------------------------------
+function cmdPalette(args) {
+  const files = args.filter((a) => !a.startsWith('--'));
+  if (!files.length) {
+    console.error('Which image? Try: notugly palette photo.png');
+    process.exit(2);
+  }
+  const notPng = files.find((f) => !/\.png$/i.test(f));
+  if (notPng) {
+    console.error(`\n  "${notPng}" isn't a .png — only PNG is supported here.`);
+    console.error(`  The decoder is written from scratch to stay zero-dependency; re-export as PNG and try again.\n`);
+    process.exit(2);
+  }
+
+  let images;
+  try {
+    images = files.map((f) => decodePng(readFileSync(f)));
+  } catch (e) {
+    console.error(`\n  ${e.message}\n`);
+    process.exit(1);
+  }
+
+  const keep = Number(flag('keep', 5));
+  const result = images.length > 1 ? paletteFromImages(images, { keep }) : paletteFromImage(images[0], { keep });
+
+  console.log(`\n  ${bold(images.length > 1 ? `${files.length} images` : files[0])}  ${dim(`${result.colours.length} colours, deterministic k-means in OKLab`)}\n`);
+  for (const col of result.colours) {
+    console.log(`  ${swatch(col.hex)} ${col.hex.padEnd(9)} ${dim(`${(col.share * 100).toFixed(1)}%`)}`);
+  }
+  console.log(`\n  ${dim('dominant')} ${swatch(result.dominant)} ${result.dominant}   ${dim('ground')} ${swatch(result.ground)} ${result.ground}`);
+  if (result.monochrome) console.log(`  ${dim('This image is close to monochrome — that is what came out of it, not an error.')}`);
+
+  const out = flag('out', null);
+  if (out) {
+    writeFileSync(out, JSON.stringify(result, null, 2));
+    console.log(`\n  Wrote ${bold(out)}\n`);
+    return;
+  }
+  console.log(`\n  ${dim(`notugly --brand ${result.dominant}  builds a system pinned to it`)}\n`);
+}
+
+// --- favicon / app icon -------------------------------------------------------
+function cmdIcon(args) {
+  const name = args[0];
+  if (!name) {
+    console.error('Whose icon? Try: notugly icon mo');
+    process.exit(2);
+  }
+  const sys = system(name, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const sizes = flag('sizes', null) ? flag('sizes').split(',').map(Number) : ICON_SIZES;
+  const pkg = iconPackage(name, sys, { sizes });
+  const out = flag('out', null);
+
+  if (!out) {
+    console.log(`\n  ${bold('Icon')}  ${dim(`letter ${pkg.letter} · ${swatch(pkg.bg)} ${pkg.bg} · ${sizes.join(', ')}px`)}\n`);
+    for (const [f, body] of Object.entries(pkg.files)) {
+      console.log(`  ${f.padEnd(16)} ${dim(`${(body.length / 1024).toFixed(1)} kB`)}`);
+    }
+    console.log(`\n  ${dim('Real pixels, encoded from scratch — no sharp, no canvas, no dependency.')}`);
+    console.log(`  ${dim(`notugly icon ${name} --out ./icons  writes them`)}\n`);
+    return;
+  }
+  mkdirSync(out, { recursive: true });
+  for (const [f, body] of Object.entries(pkg.files)) writeFileSync(`${out}/${f}`, body);
+  console.log(`\n  Wrote ${bold(String(Object.keys(pkg.files).length))} files to ${bold(out)}\n`);
 }
 
 // --- odds and ends ----------------------------------------------------------
@@ -996,6 +1068,12 @@ switch (cmd) {
     break;
   case 'shape':
     cmdShape(argv.slice(1));
+    break;
+  case 'palette':
+    cmdPalette(argv.slice(1));
+    break;
+  case 'icon':
+    cmdIcon(argv.slice(1));
     break;
   case undefined:
     // No arguments: make something, so the first run shows the product.

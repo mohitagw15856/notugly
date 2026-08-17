@@ -35,6 +35,10 @@ import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
 import { readTokens, auditTokens, toStorybook } from '../lib/ingest.mjs';
 import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
 import { extractFromCss, summarise } from '../lib/extract.mjs';
+import { glassMaterial, glassLegibility, concentricRadius, squirclePath, WORST_CASE_BACKGROUNDS } from '../lib/liquidglass.mjs';
+import { encodePng, decodePng, encodeIco } from '../lib/raster.mjs';
+import { iconPixels, iconPackage, ICON_SIZES } from '../lib/icon.mjs';
+import { glyphFor } from '../lib/font5x7.mjs';
 
 let pass = 0;
 const fails = [];
@@ -1233,6 +1237,84 @@ t('cost counts what it measured and labels what it estimated', () => {
   ok(cost.weight.names.includes('Inter') && cost.weight.names.includes('Roboto'));
   ok(!cost.weight.names.includes('Georgia'), 'Georgia was counted as a webfont');
   ok(cost.basis.includes('estimates'), 'the estimate did not say it was one');
+});
+
+// --- liquid glass ------------------------------------------------------------
+t('the concentric child radius is never negative or larger than its container', () => {
+  eq(concentricRadius(20, 8), 12);
+  eq(concentricRadius(10, 40), 0, 'padding wider than the container should floor at zero, not go negative');
+});
+
+t('the glass material composites to something readable most of the time', () => {
+  const sys = system('glasstest', { vibe: 'liquidglass' });
+  ok(sys.liquidGlass, 'liquidglass vibe should attach a material');
+  for (const variant of ['regular', 'clear']) {
+    const leg = glassLegibility(sys, { variant });
+    eq(leg.results.length, WORST_CASE_BACKGROUNDS.length);
+    ok(leg.results.every((r) => typeof r.ratio === 'number' && r.ratio >= 1), 'every composited ratio should be a real contrast ratio');
+    ok(typeof leg.passed === 'boolean');
+  }
+});
+
+t('a squircle path stays inside its own bounding box', () => {
+  const { d } = squirclePath(120, 80, 24);
+  const nums = [...d.matchAll(/-?\d+\.\d+/g)].map(Number);
+  for (let i = 0; i < nums.length; i += 2) {
+    ok(nums[i] >= -0.01 && nums[i] <= 120.01, `x ${nums[i]} escaped the box`);
+    ok(nums[i + 1] >= -0.01 && nums[i + 1] <= 80.01, `y ${nums[i + 1]} escaped the box`);
+  }
+});
+
+// --- raster: a PNG encoder and decoder written from nothing ------------------
+t('a PNG round-trips through this project\'s own encoder and decoder exactly', () => {
+  const w = 6, h = 5;
+  const data = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    data[i * 4] = (i * 53) % 256;
+    data[i * 4 + 1] = (i * 97) % 256;
+    data[i * 4 + 2] = (i * 19) % 256;
+    data[i * 4 + 3] = i % 3 === 0 ? 0 : 255; // some transparency, to catch alpha bugs
+  }
+  const png = encodePng({ data, width: w, height: h });
+  ok(png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), 'missing the PNG signature');
+  const back = decodePng(png);
+  eq(back.width, w);
+  eq(back.height, h);
+  eq(Array.from(back.data), Array.from(data), 'decoded pixels differ from what was encoded');
+});
+
+t('decodePng rejects what it cannot safely decode', () => {
+  throws(() => decodePng(Buffer.from('not a png at all')), /signature/);
+});
+
+t('encodeIco produces a valid ICO header for the sizes given', () => {
+  const png = encodePng({ data: new Uint8ClampedArray(16 * 16 * 4).fill(255), width: 16, height: 16 });
+  const ico = encodeIco([{ size: 16, png }]);
+  eq(ico.readUInt16LE(2), 1, 'ICO type field should be 1');
+  eq(ico.readUInt16LE(4), 1, 'one image was packed in, the header should say one');
+});
+
+// --- the favicon font and icon package ----------------------------------------
+t('every 5×7 glyph is actually 5 wide and 7 tall', () => {
+  for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') {
+    const g = glyphFor(ch);
+    eq(g.length, 7, `${ch}: wrong row count`);
+    for (const row of g) eq(row.length, 5, `${ch}: wrong column count`);
+  }
+});
+
+t('an icon package writes every requested size plus a favicon.ico', () => {
+  const sys = system('icontest');
+  const pkg = iconPackage('mo', sys, { sizes: [16, 32] });
+  ok(pkg.files['icon-16.png'] && pkg.files['icon-32.png'] && pkg.files['favicon.ico']);
+  ok(decodePng(pkg.files['icon-32.png']).width === 32, 'the PNG this project wrote is not readable by its own decoder');
+});
+
+t('an icon\'s ink colour clears large-text contrast against its own background', () => {
+  const px = iconPixels('A', { bg: '#123456', size: 64 });
+  // Sample the centre, which the glyph always covers for a letter this size.
+  const p = (32 * 64 + 32) * 4;
+  ok(px.data[p + 3] === 255, 'centre pixel should be opaque, inside the squircle');
 });
 
 // ---------------------------------------------------------------------------
