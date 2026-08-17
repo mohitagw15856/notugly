@@ -30,7 +30,7 @@ import { poster, specimen, zine, printWarnings, PAPER } from '../lib/paper.mjs';
 import { allEras, inEra, eraCard, ERAS } from '../lib/era.mjs';
 import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
 import { snapshot, drift, driftText } from '../lib/drift.mjs';
-import { auditTokens, toStorybook } from '../lib/ingest.mjs';
+import { auditTokens, toStorybook, toStorybookAddon } from '../lib/ingest.mjs';
 import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
 import { glassMaterial, glassLegibility, concentricRadius, squirclePath, swiftGlassSnippet, VARIANTS as GLASS_VARIANTS } from '../lib/liquidglass.mjs';
 import { mascot, MASCOT_STATES } from '../lib/mascot.mjs';
@@ -124,7 +124,7 @@ ${dim('for keeping it')}
   ${bold('notugly watch')} <url> [baseline]    what changed since last time
   ${bold('notugly check')} <url>               fail the build on a contrast regression
   ${bold('notugly tokens')} <file.json>        audit somebody else's tokens or Figma export
-  ${bold('notugly storybook')} [seed]          a Storybook story for the system
+  ${bold('notugly storybook')} [seed]          a story, plus a live toolbar switcher for every vibe
   ${bold('notugly team')} <org> <who...>       one seed, a whole company
   ${bold('notugly brands')} <seed> <#hex...>   one product, several client brand colours, checked apart
 
@@ -1028,13 +1028,18 @@ function cmdTokens(args) {
 function cmdStorybook(args) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
-  const files = { ...toStorybook(sys), 'notugly.css': exportAll(sys).files['notugly.css'] };
+  const files = {
+    ...toStorybook(sys),
+    'notugly.css': exportAll(sys).files['notugly.css'],
+    ...(has('no-addon') ? {} : toStorybookAddon(seed, { dark: has('dark') })),
+  };
   const out = flag('out', null);
   if (!out) { console.log(Object.values(files)[0]); return; }
   mkdirSync(out, { recursive: true });
   for (const [f, body] of Object.entries(files)) writeFileSync(`${out}/${f}`, body);
   console.log(`\n  Wrote ${bold(String(Object.keys(files).length))} files to ${bold(out)}`);
-  console.log(`  ${dim('Plain CSF3 — no framework import, so it works in any Storybook.')}\n`);
+  console.log(`  ${dim('Plain CSF3 — no framework import, so it works in any Storybook.')}`);
+  console.log(`  ${dim("Plus preview.js: a toolbar control that switches every story's vibe live — see ADDON.md.")}\n`);
 }
 
 function cmdTeam(args) {

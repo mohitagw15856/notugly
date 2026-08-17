@@ -32,7 +32,7 @@ import { poster, specimen, zine, printWarnings, PAPER } from '../lib/paper.mjs';
 import { ERAS, inEra, allEras, eraCard } from '../lib/era.mjs';
 import { snapshot, drift, driftText } from '../lib/drift.mjs';
 import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
-import { readTokens, auditTokens, toStorybook } from '../lib/ingest.mjs';
+import { readTokens, auditTokens, toStorybook, toStorybookAddon } from '../lib/ingest.mjs';
 import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
 import { extractFromCss, summarise } from '../lib/extract.mjs';
 import { glassMaterial, glassLegibility, concentricRadius, squirclePath, WORST_CASE_BACKGROUNDS } from '../lib/liquidglass.mjs';
@@ -1446,6 +1446,21 @@ t('the VS Code extension scaffold is a real 128px icon plus a valid, publisher-f
   eq(icon.height, 128);
   ok(files['README.md'].includes('publisher'), 'the README should explain the placeholder');
   ok(files['.vscodeignore'].length > 0);
+});
+
+// --- Storybook addon -----------------------------------------------------
+t('the Storybook addon carries a valid :root block for every vibe, and only every vibe', () => {
+  const preview = toStorybookAddon('sb-test')['preview.js'];
+  for (const v of VIBE_NAMES) ok(preview.includes(`"${v}"`), `missing vibe ${v} in the toolbar items`);
+  ok(preview.includes('globalTypes'));
+  ok(preview.includes('decorators'));
+  eq((preview.match(/:root \{/g) || []).length, VIBE_NAMES.length, 'expected exactly one :root block per vibe');
+});
+t('the Storybook addon has no syntax errors', () => {
+  const preview = toStorybookAddon('sb-test')['preview.js'];
+  // A real parse check, not a string-shape guess: strip the `export` keywords
+  // (this file is an ES module, `new Function` cannot parse those) and run it.
+  new Function(preview.replace(/^export /gm, ''));
 });
 
 // ---------------------------------------------------------------------------
