@@ -32,6 +32,11 @@ import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
 import { snapshot, drift, driftText } from '../lib/drift.mjs';
 import { auditTokens, toStorybook } from '../lib/ingest.mjs';
 import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
+import { glassMaterial, glassLegibility, concentricRadius, squirclePath, swiftGlassSnippet, VARIANTS as GLASS_VARIANTS } from '../lib/liquidglass.mjs';
+import { mascot, MASCOT_STATES } from '../lib/mascot.mjs';
+import { gradient, KINDS as GRADIENT_KINDS } from '../lib/gradient.mjs';
+import { pattern, PATTERNS } from '../lib/pattern.mjs';
+import { blob, divider, DIVIDERS } from '../lib/shape.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 
 const argv = process.argv.slice(2);
@@ -75,6 +80,11 @@ function usage(code = 0) {
   ${bold('notugly print')} [seed]              what survives CMYK
   ${bold('notugly figma')} [seed]              a loadable Figma plugin
   ${bold('notugly vscode')} [seed]             an editor theme from the same system
+  ${bold('notugly glass')} [seed]              Apple's Liquid Glass, with the legibility actually checked
+  ${bold('notugly mascot')} [seed]             the small man who lives on the website, as SVG
+  ${bold('notugly gradient')} [seed]           a mesh gradient, as CSS or SVG — never a PNG
+  ${bold('notugly pattern')} <name>            grain, dots, grid, lines… as a data URI
+  ${bold('notugly shape')} <kind>              a blob or a section divider
 
 ${dim('for the people who have to present it')}
   ${bold('notugly spec')} <url>                what is that design made of, as a table
@@ -263,6 +273,113 @@ function cmdAudit(args) {
   const pass = a.passed && s.passed;
   console.log(`\n  ${pass ? c(32, 'Provably not ugly.') : c(31, 'Not yet.')}\n`);
   if (!pass) process.exit(1);
+}
+
+// --- liquid glass -------------------------------------------------------------
+function cmdGlass(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: 'liquidglass', dark: has('dark'), brand: flag('brand', null) });
+  const container = squirclePath(240, 140, sys.radius.lg);
+  const pad = 16;
+  const childRadius = concentricRadius(sys.radius.lg, pad);
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    for (const variant of GLASS_VARIANTS) {
+      writeFileSync(`${out}/glass-${variant}.css`, `.glass-${variant} {\n  ${sys.liquidGlass[variant].css}\n}\n`);
+      writeFileSync(`${out}/NotuglyGlass-${variant}.swift`, swiftGlassSnippet(sys, { variant }));
+    }
+    writeFileSync(`${out}/container.svg`, container.svg);
+    writeFileSync(`${out}/legibility.json`, JSON.stringify(sys.liquidGlass.legibility, null, 2));
+    console.log(`\n  Wrote ${bold(String(GLASS_VARIANTS.length * 2 + 2))} files to ${bold(out)}`);
+    console.log(`  ${dim('CSS for the web, .swift for the real API, an SVG squircle, and the legibility sweep as JSON.')}\n`);
+    return;
+  }
+
+  console.log(`\n  ${bold('Liquid Glass')}  ${dim(`seed ${sys.seed}${sys.dark ? ' · dark' : ''}`)}\n`);
+  for (const variant of GLASS_VARIANTS) {
+    const mat = sys.liquidGlass[variant];
+    console.log(`  ${bold(variant)}  ${dim(`alpha ${mat.alpha} · blur ${mat.blur}px · saturate ${mat.saturate}`)}`);
+    const leg = sys.liquidGlass.legibility[variant];
+    console.log(`  ${leg.passed ? c(32, '✓') : c(31, '✗')} ${dim(leg.note)}`);
+    console.log();
+  }
+  console.log(`  ${bold('Concentric radius')}  ${dim(`container ${sys.radius.lg}px, ${pad}px padding → child ${childRadius}px`)}`);
+  console.log(`  ${dim('Not container radius minus a guess — the child curve is centred on the same point as the parent.')}\n`);
+  console.log(`  ${dim(`notugly glass ${sys.seed} --out ./glass  writes CSS, Swift, the squircle SVG and the legibility sweep`)}\n`);
+}
+
+// --- mascot / gradient / pattern / shape ------------------------------------
+function cmdMascot(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const state = flag('mood', 'idle');
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    const states = has('all') ? MASCOT_STATES : [state];
+    for (const s of states) writeFileSync(`${out}/mascot-${s}.svg`, mascot(sys.colour, { state: s, size: Number(flag('size', 132)) }));
+    console.log(`\n  Wrote ${bold(String(states.length))} mascot SVG(s) to ${bold(out)}\n`);
+    return;
+  }
+  console.log(mascot(sys.colour, { state, size: Number(flag('size', 132)) }));
+}
+
+function cmdGradient(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const kind = flag('kind', null);
+  const grad = gradient(seed, { kind: kind || undefined, dark: has('dark') });
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    writeFileSync(`${out}/gradient.svg`, grad.svg);
+    writeFileSync(`${out}/gradient.css`, `.gradient {\n  ${grad.css}\n}\n`);
+    console.log(`\n  Wrote ${bold('2')} files to ${bold(out)}  ${dim(grad.kind)}\n`);
+    return;
+  }
+  console.log(`\n  ${bold(grad.kind)}  ${dim(`base ${grad.base}`)}\n`);
+  console.log(`  ${grad.stops.map((h) => swatch(h, 6)).join('')}`);
+  console.log(`\n  ${grad.css}\n`);
+  console.log(`  ${dim(`notugly gradient ${seed} --kind ${GRADIENT_KINDS.join('|')} --out ./g`)}\n`);
+}
+
+function cmdPattern(args) {
+  const name = args[0] || flag('name', 'dots');
+  const seed = flag('seed', 'notugly');
+  const pat = pattern(name, { colour: flag('colour', '#000000'), opacity: Number(flag('opacity', 0.08)), seed });
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    writeFileSync(`${out}/pattern.svg`, pat.svg);
+    writeFileSync(`${out}/pattern.css`, `.pattern {\n  ${pat.css}\n}\n`);
+    console.log(`\n  Wrote ${bold('2')} files to ${bold(out)}  ${dim(`${pat.name} · ${pat.bytes} B`)}\n`);
+    return;
+  }
+  console.log(`\n  ${bold(pat.name)}  ${dim(`${pat.bytes} B as a data URI`)}\n`);
+  console.log(`  ${pat.css}\n`);
+  console.log(`  ${dim(`notugly pattern ${PATTERNS.join('|')} --out ./p`)}\n`);
+}
+
+function cmdShape(args) {
+  const kind = args[0] || flag('kind', 'blob');
+  const seed = flag('seed', 'notugly');
+  const out = flag('out', null);
+
+  if (kind === 'blob') {
+    const b = blob(seed, { size: Number(flag('size', 200)) });
+    if (out) { writeFileSync(out, b.svg); console.log(`\n  Wrote ${bold(out)}\n`); return; }
+    console.log(b.svg);
+    console.log(`\n  ${dim('notugly shape blob --out blob.svg')}\n`);
+    return;
+  }
+  const d = divider(kind, { flip: has('flip'), seed });
+  if (out) { writeFileSync(out, d.svg); console.log(`\n  Wrote ${bold(out)}\n`); return; }
+  console.log(d.svg);
+  console.log(`\n  ${dim(`notugly shape ${DIVIDERS.join('|')}|blob --out shape.svg`)}\n`);
 }
 
 // --- odds and ends ----------------------------------------------------------
@@ -864,6 +981,21 @@ switch (cmd) {
     break;
   case 'team':
     cmdTeam(argv.slice(1));
+    break;
+  case 'glass':
+    cmdGlass(argv.slice(1));
+    break;
+  case 'mascot':
+    cmdMascot(argv.slice(1));
+    break;
+  case 'gradient':
+    cmdGradient(argv.slice(1));
+    break;
+  case 'pattern':
+    cmdPattern(argv.slice(1));
+    break;
+  case 'shape':
+    cmdShape(argv.slice(1));
     break;
   case undefined:
     // No arguments: make something, so the first run shows the product.
