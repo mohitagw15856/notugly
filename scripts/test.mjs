@@ -41,6 +41,7 @@ import { iconPixels, iconPackage, ICON_SIZES } from '../lib/icon.mjs';
 import { glyphFor } from '../lib/font5x7.mjs';
 import { checkRtl, checkSystemRtl } from '../lib/rtl.mjs';
 import { accessibilityStatement } from '../lib/statement.mjs';
+import { benchmark, APPROACHES } from '../lib/benchmark.mjs';
 
 let pass = 0;
 const fails = [];
@@ -1396,6 +1397,16 @@ t('the statement HTML is self-contained, like every other document this project 
   const stmt = accessibilityStatement(system('stmt'));
   ok(stmt.html.includes('@page'));
   ok(!/<script|src="http|href="http/.test(stmt.html));
+});
+
+// --- benchmark -------------------------------------------------------------
+t('notugly is the only zero-kilobyte row, and every row explains itself', () => {
+  const b = benchmark();
+  const nu = b.rows.find((r) => r.name === 'notugly');
+  eq(nu.runtimeKb, 0);
+  ok(b.rows.filter((r) => r !== nu).every((r) => r.runtimeKb > 0), 'every alternative should carry a real cost');
+  ok(b.rows.every((r) => r.note.length > 20), 'every row needs an actual explanation, not just a number');
+  eq(APPROACHES.length, b.rows.length);
 });
 
 // ---------------------------------------------------------------------------

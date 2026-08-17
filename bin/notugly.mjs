@@ -42,6 +42,7 @@ import { decodePng } from '../lib/raster.mjs';
 import { iconPackage, ICON_SIZES } from '../lib/icon.mjs';
 import { checkSystemRtl } from '../lib/rtl.mjs';
 import { accessibilityStatement } from '../lib/statement.mjs';
+import { benchmark } from '../lib/benchmark.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 
 const argv = process.argv.slice(2);
@@ -101,6 +102,7 @@ function usage(code = 0) {
   ${bold('notugly icon')} <name>               a favicon + app-icon package, real PNG/ICO pixels
   ${bold('notugly rtl')} [seed]                scans the generated CSS for left/right that should be logical
   ${bold('notugly a11y-statement')} [seed]      a publishable statement — what conforms, what wasn't checked
+  ${bold('notugly benchmark')}                  the "0 bytes runtime" claim, with a number next to the alternative
 
 ${dim('for the people who have to present it')}
   ${bold('notugly spec')} <url>                what is that design made of, as a table
@@ -510,6 +512,20 @@ function cmdStatement(args) {
   }
   console.log(`\n${stmt.markdown}\n`);
   console.log(`  ${dim(`notugly a11y-statement ${sys.seed} --out statement.html  writes the printable version`)}\n`);
+}
+
+// --- benchmark -----------------------------------------------------------------
+function cmdBenchmark() {
+  const b = benchmark();
+  if (wantsJson()) return printJson(b);
+
+  console.log(`\n  ${bold('What "no runtime" is actually worth')}  ${dim(`typical use, gzipped/minified, ${b.asOf}`)}\n`);
+  for (const r of b.rows) {
+    const kb = r.runtimeKb === 0 ? c(32, '0 kB') : `${String(r.runtimeKb).padStart(3)} kB`;
+    console.log(`  ${r.name.padEnd(38)} ${dim(r.kind.padEnd(20))} ${bold(kb)}`);
+    console.log(`  ${' '.repeat(38)} ${dim(r.note)}\n`);
+  }
+  console.log(`  ${dim(b.note)}\n`);
 }
 
 // --- odds and ends ----------------------------------------------------------
@@ -1160,6 +1176,9 @@ switch (cmd) {
     break;
   case 'a11y-statement':
     cmdStatement(argv.slice(1));
+    break;
+  case 'benchmark':
+    cmdBenchmark();
     break;
   case undefined:
     // No arguments: make something, so the first run shows the product.
