@@ -22,7 +22,7 @@ import { fixContrast, inspect } from '../lib/fix.mjs';
 import { roast } from '../lib/roast.mjs';
 import { persona, cast, card, identityKit, handle, displayName, ARCHETYPES } from '../lib/persona.mjs';
 import { mascot, MASCOT_STATES, reactTo, quip } from '../lib/mascot.mjs';
-import { toFigma, toVsCode } from '../lib/targets.mjs';
+import { toFigma, toVsCode, toIOS, toAndroid, toReactNative, toFlutter, toEmail } from '../lib/targets.mjs';
 import { name as nameColour, nameAll, nearestName } from '../lib/names.mjs';
 import { quantise, paletteFromImage, paletteFromImages, perceptualDistance } from '../lib/quantise.mjs';
 import { specSheet, specMarkdown, compare, onePager, onePagerHtml, costOf } from '../lib/spec.mjs';
@@ -289,8 +289,13 @@ t('every motion preset ships its own off switch', () => {
 // --- exports ---------------------------------------------------------------
 t('every export target is produced and non-trivial', () => {
   const e = exportAll(system('exp'));
-  eq(Object.keys(e.files).length, 10);
-  for (const [name, body] of Object.entries(e.files)) ok(body.length > 150, `${name} is suspiciously short`);
+  eq(Object.keys(e.files).length, 30);
+  for (const [name, body] of Object.entries(e.files)) {
+    // Xcode's own xcassets catalog root is genuinely this small — it is
+    // metadata, not a colour definition, so it is the one legitimate exception.
+    if (name === 'ios/Assets.xcassets/Contents.json') continue;
+    ok(body.length > 150, `${name} is suspiciously short`);
+  }
 });
 t('exports report their size and claim no runtime', () => {
   const e = exportAll(system('exp'));
@@ -309,6 +314,44 @@ t('the Tailwind export is valid JavaScript', () => {
   // above it contains braces of its own.
   const body = src.slice(src.indexOf('export default') + 'export default'.length);
   JSON.parse(body.slice(body.indexOf('{'), body.lastIndexOf('}') + 1));
+});
+t('the iOS export is a valid xcassets catalog with both appearances', () => {
+  const files = toIOS(system('exp'));
+  const bg = JSON.parse(files['Assets.xcassets/NotuglyBg.colorset/Contents.json']);
+  eq(bg.colors.length, 2, 'expected a light and a dark appearance');
+  ok(Array.isArray(bg.colors[1].appearances), 'the second entry should declare a dark appearance');
+  for (const entry of bg.colors) {
+    for (const ch of ['red', 'green', 'blue']) {
+      const v = Number(entry.color.components[ch]);
+      ok(v >= 0 && v <= 1, `${ch} out of 0–1 range: ${v}`);
+    }
+  }
+});
+t('the Android export declares every core colour in both light and dark', () => {
+  const files = toAndroid(system('exp'));
+  for (const path of ['src/main/res/values/colors.xml', 'src/main/res/values-night/colors.xml']) {
+    const xml = files[path];
+    const count = (xml.match(/<color name=/g) || []).length;
+    eq(count, 11, `${path}: expected 11 colour entries`);
+    ok(!xml.includes('undefined'), `${path} leaked an undefined value`);
+  }
+});
+t('the Flutter export is a real ThemeData with a full colour scheme', () => {
+  const dart = toFlutter(system('exp'));
+  ok(dart.includes('ThemeData'));
+  ok(dart.includes('ColorScheme.'));
+  ok(!dart.includes('undefined'));
+});
+t('the React Native export has no CSS in it', () => {
+  const src = toReactNative(system('exp'));
+  ok(src.includes('export const colors'));
+  ok(!/var\(--|@media|backdrop-filter/.test(src), 'RN has no CSS engine — this should never reach it');
+});
+t('the email export has no <style> block or CSS variable an email client might strip', () => {
+  const html = toEmail(system('exp'));
+  ok(!/<style/.test(html), 'email clients strip <style> blocks');
+  ok(!/var\(--/.test(html), 'email clients do not resolve CSS custom properties');
+  ok(html.includes('<table'), 'should be table-based layout');
 });
 t('the CSS export declares every colour the audit checks', () => {
   const css = toCss(system('exp'));
