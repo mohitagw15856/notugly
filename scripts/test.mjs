@@ -36,6 +36,7 @@ import { readTokens, auditTokens, toStorybook, toStorybookAddon } from '../lib/i
 import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
 import { extractFromCss, summarise } from '../lib/extract.mjs';
 import { TOOLS as MCP_TOOLS, callTool as mcpCallTool } from '../mcp/server.mjs';
+import { seedChangelog } from '../lib/changelog.mjs';
 import { glassMaterial, glassLegibility, concentricRadius, squirclePath, WORST_CASE_BACKGROUNDS } from '../lib/liquidglass.mjs';
 import { encodePng, decodePng, encodeIco } from '../lib/raster.mjs';
 import { iconPixels, iconPackage, ICON_SIZES } from '../lib/icon.mjs';
@@ -1493,6 +1494,29 @@ t('an unknown MCP tool name is a clean isError, not a thrown exception', () => {
 t('a bad hex through MCP is a clean isError, not a crash', () => {
   const result = mcpCallTool('name_colour', { hex: 'not-a-colour' });
   eq(result.isError, true);
+});
+
+// --- seed changelog --------------------------------------------------------
+t('the same seed against itself has no changelog', () => {
+  const sys = system('changelog-test', { vibe: 'editorial' });
+  const report = seedChangelog(sys, system('changelog-test', { vibe: 'editorial' }));
+  eq(report.changed, false);
+  eq(report.changes.length, 0);
+});
+t('a different seed produces a real, pathed diff', () => {
+  const before = system('changelog-a', { vibe: 'editorial' });
+  const after = system('changelog-b', { vibe: 'editorial' });
+  const report = seedChangelog(before, after);
+  ok(report.changed);
+  ok(report.changes.some((c) => c.path === 'colour.bg' || c.path === 'colour.text' || c.path.startsWith('colour.')), 'expected at least one colour field to differ');
+  ok(report.changes.every((c) => 'before' in c && 'after' in c && c.path), 'every change needs a path and both values');
+});
+t('a different vibe changes structural fields, not just colour', () => {
+  const before = system('changelog-c', { vibe: 'editorial' });
+  const after = system('changelog-c', { vibe: 'brutalist' });
+  const report = seedChangelog(before, after);
+  ok(report.changed);
+  ok(report.changes.some((c) => c.path === 'motion'), 'editorial and brutalist use different motion presets');
 });
 
 // ---------------------------------------------------------------------------

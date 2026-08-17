@@ -44,7 +44,12 @@ import { checkSystemRtl } from '../lib/rtl.mjs';
 import { accessibilityStatement } from '../lib/statement.mjs';
 import { benchmark } from '../lib/benchmark.mjs';
 import { brandSet, brandDistinct } from '../lib/brand.mjs';
-import { readFileSync, existsSync } from 'node:fs';
+import { seedChangelog } from '../lib/changelog.mjs';
+import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 const argv = process.argv.slice(2);
 const COLOR = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -128,6 +133,7 @@ ${dim('for keeping it')}
   ${bold('notugly storybook')} [seed]          a story, plus a live toolbar switcher for every vibe
   ${bold('notugly team')} <org> <who...>       one seed, a whole company
   ${bold('notugly brands')} <seed> <#hex...>   one product, several client brand colours, checked apart
+  ${bold('notugly changelog')} <seed>          did this seed's design change across two git refs of this repo
 
 ${dim('options')}  --vibe ${VIBE_NAMES.join('|')}   --dark   --style ${STYLES.slice(0, 4).join('|')}…
          --out <dir>   --size <px>   --seed <seed>   --brand <#hex>
@@ -1124,6 +1130,73 @@ function cmdBrands(args) {
   console.log(`\n  ${dim(`notugly brands ${seed} ${hexes.join(' ')} --out ./tenants  writes a full export per brand`)}\n`);
 }
 
+// --- seed changelog ------------------------------------------------------------
+
+// The repo root this CLI itself is running from — not process.cwd(), which
+// could be anywhere the user happened to be standing when they ran the
+// command. This only means anything inside a git checkout of notugly.
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+const git = (args) => execFileSync('git', args, { cwd: REPO_ROOT, maxBuffer: 1024 * 1024 * 32, stdio: ['ignore', 'pipe', 'pipe'] });
+
+/** Reconstruct lib/ as it existed at a given git ref, in a scratch
+ * directory, and import system() from that copy — so two versions of the
+ * same file can be loaded side by side without either overwriting the other
+ * in Node's module cache. Uses only `git ls-tree`/`git show`, not `git
+ * archive` + tar, so it needs no extraction step beyond files this CLI can
+ * already write itself. */
+async function loadSystemAt(ref) {
+  const listing = git(['ls-tree', '-r', '--name-only', ref, '--', 'lib']).toString('utf8').trim();
+  if (!listing) throw new Error(`"${ref}" has no lib/ directory — is that a valid ref in this repo?`);
+
+  const scratch = mkdtempSync(join(tmpdir(), 'notugly-changelog-'));
+  for (const file of listing.split('\n')) {
+    const content = git(['show', `${ref}:${file}`]);
+    const dest = join(scratch, file);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, content);
+  }
+  return import(`file://${join(scratch, 'lib', 'system.mjs')}?t=${Date.now()}`);
+}
+
+async function cmdChangelog(args) {
+  const seed = args[0];
+  if (!seed) {
+    console.error('Which seed? Try: notugly changelog acme --against HEAD~5');
+    process.exit(2);
+  }
+  const against = flag('against', 'HEAD~1');
+  const vibe = flag('vibe', 'editorial');
+  const dark = has('dark');
+
+  let oldSystem;
+  try {
+    oldSystem = (await loadSystemAt(against)).system;
+  } catch (e) {
+    const reason = e.stderr ? e.stderr.toString('utf8').trim().split('\n')[0] : e.message;
+    console.error(`\n  Could not load notugly at "${against}": ${reason}`);
+    console.error(`  This compares a seed across two git refs of this repo — it needs a git checkout, not the published npm package.\n`);
+    process.exit(1);
+  }
+
+  const before = oldSystem(seed, { vibe, dark });
+  const after = system(seed, { vibe, dark });
+  const report = seedChangelog(before, after);
+
+  if (wantsJson()) return printJson({ seed, against, vibe, ...report });
+
+  console.log(`\n  ${bold(seed)}  ${dim(`${vibe} · ${against} → working tree`)}\n`);
+  if (!report.changed) {
+    console.log(`  ${c(32, '✓')} ${report.summary}\n`);
+    return;
+  }
+  for (const ch of report.changes.slice(0, 40)) {
+    console.log(`  ${c(33, '~')} ${ch.path.padEnd(24)} ${dim(String(ch.before))} → ${bold(String(ch.after))}`);
+  }
+  if (report.changes.length > 40) console.log(`  ${dim(`… and ${report.changes.length - 40} more`)}`);
+  console.log(`\n  ${report.summary}\n`);
+}
+
 // ---------------------------------------------------------------------------
 const cmd = argv[0];
 if (argv.includes('--help') || argv.includes('-h')) usage(0);
@@ -1220,6 +1293,9 @@ switch (cmd) {
     break;
   case 'brands':
     cmdBrands(argv.slice(1));
+    break;
+  case 'changelog':
+    await cmdChangelog(argv.slice(1));
     break;
   case 'glass':
     cmdGlass(argv.slice(1));
