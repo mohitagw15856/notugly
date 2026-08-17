@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Tests. The claim this project makes is checkable, so it is checked.
 
-import { hexToRgb, rgbToHex, hexToOklch, oklchToHex, contrast, ramp, accessibleOn, luminance, rate } from '../lib/color.mjs';
+import { hexToRgb, rgbToHex, hexToOklch, oklchToHex, contrast, ramp, accessibleOn, luminance, rate, AA_TEXT } from '../lib/color.mjs';
 import { rng, chance, toSeed, hash } from '../lib/seed.mjs';
 import { avatar, describe, STYLES, paletteFor } from '../lib/avatar.mjs';
 import { system, audit } from '../lib/system.mjs';
@@ -35,6 +35,7 @@ import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
 import { readTokens, auditTokens, toStorybook, toStorybookAddon } from '../lib/ingest.mjs';
 import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
 import { extractFromCss, summarise } from '../lib/extract.mjs';
+import { TOOLS as MCP_TOOLS, callTool as mcpCallTool } from '../mcp/server.mjs';
 import { glassMaterial, glassLegibility, concentricRadius, squirclePath, WORST_CASE_BACKGROUNDS } from '../lib/liquidglass.mjs';
 import { encodePng, decodePng, encodeIco } from '../lib/raster.mjs';
 import { iconPixels, iconPackage, ICON_SIZES } from '../lib/icon.mjs';
@@ -1461,6 +1462,37 @@ t('the Storybook addon has no syntax errors', () => {
   // A real parse check, not a string-shape guess: strip the `export` keywords
   // (this file is an ES module, `new Function` cannot parse those) and run it.
   new Function(preview.replace(/^export /gm, ''));
+});
+
+// --- the MCP server's tools, called directly (no subprocess, no wire protocol) ---
+t('every MCP tool has a name, a description and a JSON Schema input', () => {
+  for (const tool of MCP_TOOLS) {
+    ok(tool.name && tool.description, `${tool.name}: missing name or description`);
+    eq(tool.inputSchema.type, 'object');
+    ok(Array.isArray(tool.inputSchema.required) && tool.inputSchema.required.length > 0);
+  }
+});
+t('check_contrast returns the same ratio the CLI audit does, in MCP\'s content shape', () => {
+  const result = mcpCallTool('check_contrast', { foreground: '#000000', background: '#ffffff' });
+  ok(!result.isError);
+  const payload = JSON.parse(result.content[0].text);
+  eq(payload.ratio, 21);
+  eq(payload.wcagGrade, 'AAA');
+  eq(payload.passesAA, true);
+});
+t('fix_contrast via MCP matches fixContrast() called directly', () => {
+  const viaMcp = JSON.parse(mcpCallTool('fix_contrast', { foreground: '#8ab4f8', background: '#ffffff' }).content[0].text);
+  const direct = fixContrast('#8ab4f8', '#ffffff', { target: AA_TEXT });
+  eq(viaMcp, direct);
+});
+t('an unknown MCP tool name is a clean isError, not a thrown exception', () => {
+  const result = mcpCallTool('does-not-exist', {});
+  eq(result.isError, true);
+  ok(result.content[0].text.includes('does-not-exist'));
+});
+t('a bad hex through MCP is a clean isError, not a crash', () => {
+  const result = mcpCallTool('name_colour', { hex: 'not-a-colour' });
+  eq(result.isError, true);
 });
 
 // ---------------------------------------------------------------------------

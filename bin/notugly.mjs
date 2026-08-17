@@ -104,6 +104,7 @@ function usage(code = 0) {
   ${bold('notugly rtl')} [seed]                scans the generated CSS for left/right that should be logical
   ${bold('notugly a11y-statement')} [seed]      a publishable statement — what conforms, what wasn't checked
   ${bold('notugly benchmark')}                  the "0 bytes runtime" claim, with a number next to the alternative
+  ${bold('notugly mcp')}                        how to point an MCP client at check_contrast/fix_contrast/name_colour
 
 ${dim('for the people who have to present it')}
   ${bold('notugly spec')} <url>                what is that design made of, as a table
@@ -528,6 +529,27 @@ function cmdBenchmark() {
     console.log(`  ${' '.repeat(38)} ${dim(r.note)}\n`);
   }
   console.log(`  ${dim(b.note)}\n`);
+}
+
+// --- mcp -----------------------------------------------------------------------
+function cmdMcp() {
+  console.log(`
+  ${bold('notugly is also an MCP server')}
+
+  Three tools, straight off this library — no separate service, no API key:
+
+    ${bold('check_contrast')}   WCAG 2.1 and APCA between two colours
+    ${bold('fix_contrast')}     the nearest passing colour to one you picked
+    ${bold('name_colour')}      what colour is that, in words
+
+  Point an MCP client at it directly (it speaks stdio, not this CLI's argv):
+
+    ${dim('node ' + new URL('../mcp/server.mjs', import.meta.url).pathname)}
+
+  Or, from an MCP client's own config:
+
+  ${dim(JSON.stringify({ mcpServers: { notugly: { command: 'node', args: [new URL('../mcp/server.mjs', import.meta.url).pathname] } } }, null, 2).split('\n').join('\n  '))}
+`);
 }
 
 // --- odds and ends ----------------------------------------------------------
@@ -1228,6 +1250,9 @@ switch (cmd) {
     break;
   case 'benchmark':
     cmdBenchmark();
+    break;
+  case 'mcp':
+    cmdMcp();
     break;
   case undefined:
     // No arguments: make something, so the first run shows the product.

@@ -1,9 +1,9 @@
 {
   "name": "notugly",
   "version": "0.3.0",
-  "description": "Designs that are provably not ugly. Generate a whole design system from a seed — every text pairing clears WCAG AA before you see it. Twenty avatar styles, whole generated personas, and exports to CSS, Tailwind, tokens, React, Svelte, HTML, Figma and VS Code. Zero dependencies, zero runtime.",
+  "description": "Designs that are provably not ugly. Generate a whole design system from a seed — every text pairing clears WCAG AA before you see it. Twenty avatar styles, whole generated personas, Apple's Liquid Glass with the legibility actually checked, and exports to CSS, Tailwind, tokens, React, Svelte, HTML, Figma, VS Code, iOS, Android, React Native, Flutter and email. Zero dependencies, zero runtime.",
   "type": "module",
-  "bin": { "notugly": "bin/notugly.mjs" },
+  "bin": { "notugly": "bin/notugly.mjs", "notugly-mcp": "mcp/server.mjs" },
   "exports": {
     ".": "./lib/system.mjs",
     "./avatar": "./lib/avatar.mjs",
@@ -27,14 +27,23 @@
     "./drift": "./lib/drift.mjs",
     "./team": "./lib/team.mjs",
     "./ingest": "./lib/ingest.mjs",
-    "./zip": "./lib/zip.mjs"
+    "./zip": "./lib/zip.mjs",
+    "./liquidglass": "./lib/liquidglass.mjs",
+    "./raster": "./lib/raster.mjs",
+    "./icon": "./lib/icon.mjs",
+    "./rtl": "./lib/rtl.mjs",
+    "./statement": "./lib/statement.mjs",
+    "./benchmark": "./lib/benchmark.mjs",
+    "./brand": "./lib/brand.mjs",
+    "./changelog": "./lib/changelog.mjs"
   },
-  "files": ["bin/", "lib/", "action.yml", "LICENSE"],
+  "files": ["bin/", "lib/", "mcp/", "action.yml", "LICENSE"],
   "scripts": {
     "build": "node scripts/build-readme.mjs",
     "build:site": "node scripts/build-site.mjs",
     "test": "node scripts/test.mjs",
     "audit": "node bin/notugly.mjs audit",
+    "mcp": "node mcp/server.mjs",
     "ci": "npm test && npm run build && npm run build:site"
   },
   "keywords": [
@@ -45,7 +54,9 @@
     "persona", "identity", "apca", "color-blindness", "figma", "vscode-theme",
     "og-image", "cmyk", "profile-picture", "pfp",
     "color-names", "moodboard", "powerpoint", "keynote", "google-slides",
-    "design-drift", "storybook", "design-tokens-audit", "product-management"
+    "design-drift", "storybook", "design-tokens-audit", "product-management",
+    "liquid-glass", "ios", "android", "react-native", "flutter", "favicon",
+    "mcp", "model-context-protocol", "rtl", "whitelabel", "multi-brand", "png"
   ],
   "author": "Mohit (mohitagw15856)",
   "license": "MIT",
