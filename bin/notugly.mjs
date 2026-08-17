@@ -56,6 +56,13 @@ const flag = (name, fallback = null) => {
 };
 const has = (name) => argv.includes(`--${name}`);
 
+// A subset of commands can print machine-readable output instead of the
+// formatted terminal report — for scripting (`notugly audit --json | jq`),
+// not for humans reading a terminal. Every command that supports it checks
+// this before it prints anything else.
+const wantsJson = () => has('json');
+const printJson = (obj) => console.log(JSON.stringify(obj, null, 2));
+
 // A block of colour in the terminal, using truecolor. In a pipe there is no
 // colour to show, so the caller prints the hex instead — printing both gives
 // you the hex twice.
@@ -120,6 +127,8 @@ ${dim('for keeping it')}
 ${dim('options')}  --vibe ${VIBE_NAMES.join('|')}   --dark   --style ${STYLES.slice(0, 4).join('|')}…
          --out <dir>   --size <px>   --seed <seed>   --brand <#hex>
          --mood neutral|happy|thinking|surprised|sleepy|determined   --hat party|beanie|shades|scarf|halo|crown
+         --json  raw output instead of the formatted report, on audit/vision/print/roast/fix/
+                 spec/diff/onepager/cost/watch/check/tokens — for scripting, not reading
 
 ${dim('Everything is deterministic: the same seed always gives the same design.')}`);
   process.exit(code);
@@ -266,6 +275,12 @@ function cmdAudit(args) {
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const a = audit(sys);
   const s = staticChecks(sys);
+  const pass0 = a.passed && s.passed;
+  if (wantsJson()) {
+    printJson({ seed: sys.seed, vibe: sys.vibe, audit: a, staticChecks: s, passed: pass0 });
+    if (!pass0) process.exit(1);
+    return;
+  }
 
   console.log(`\n  ${bold('Contrast')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
   for (const r of a.results) {
@@ -607,6 +622,7 @@ function cmdFix(args) {
     process.exit(2);
   }
   const i = inspect(fg, bg);
+  if (wantsJson()) return printJson(i);
   console.log(`\n  ${swatch(fg)} ${fg}  ${dim('on')}  ${swatch(bg)} ${bg}\n`);
   console.log(`  ${bold('WCAG 2')}    ${i.wcag.ratio}:1  ${i.wcag.aa ? c(32, i.wcag.grade) : c(31, 'fail')}  ${dim('needs 4.5 for body text')}`);
   console.log(`  ${bold('APCA')}      Lc ${i.apca.lc}  ${dim(i.apca.use)}\n`);
@@ -634,6 +650,7 @@ function cmdRoast(args) {
     process.exit(2);
   }
   const r = roast(colours);
+  if (wantsJson()) return printJson(r);
   console.log(`\n  ${bold(r.verdict)}  ${dim(`${r.score}/100`)}\n`);
   for (const b of r.burns) {
     const mark = b.severity >= 4 ? c(31, '✗') : b.severity >= 2 ? c(33, '!') : dim('·');
@@ -648,6 +665,7 @@ function cmdVision(args) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const v = checkVision(sys.colour);
+  if (wantsJson()) return printJson({ seed: sys.seed, vibe: sys.vibe, ...v });
 
   console.log(`\n  ${bold('Colour vision')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
   const roles = ['bg', 'surface', 'text', 'textMuted', 'brand', 'accent', 'buttonBg', 'border'];
@@ -672,6 +690,7 @@ function cmdPrint(args) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const r = printReport(sys.colour);
+  if (wantsJson()) return printJson({ seed: sys.seed, vibe: sys.vibe, ...r });
   console.log(`\n  ${bold('On paper')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
   for (const check of r.checks) {
     const flagged = check.notes.length;
@@ -723,6 +742,7 @@ async function cmdSpec(args) {
   if (!target) { console.error('What am I looking at? Try: notugly spec stripe.com'); process.exit(2); }
   const dna = await readDna(target);
   const spec = specSheet(dna);
+  if (wantsJson()) return printJson(spec);
   const out = flag('out', null);
   if (out) { writeFileSync(out, specMarkdown(spec)); console.log(`\n  Wrote ${bold(out)}\n`); return; }
 
@@ -746,6 +766,7 @@ async function cmdDiff(args) {
   const [a, b] = args.filter((x) => !x.startsWith('--'));
   if (!a || !b) { console.error('Two things to compare: notugly diff stripe.com linear.app'); process.exit(2); }
   const cmp = compare(await readDna(a), await readDna(b), { labels: [a, b] });
+  if (wantsJson()) return printJson(cmp);
   const out = flag('out', null);
   if (out) { writeFileSync(out, compareMarkdown(cmp)); console.log(`\n  Wrote ${bold(out)}\n`); return; }
 
@@ -765,6 +786,7 @@ async function cmdOnePager(args) {
     ? await readDna(target)
     : system(target || flag('seed', 'notugly'), { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const page = onePager(input, { title: flag('title', target ? `${target} — accessibility review` : 'Accessibility review') });
+  if (wantsJson()) return printJson(page);
   const out = flag('out', null);
   if (out) {
     writeFileSync(out, onePagerHtml(page));
@@ -787,6 +809,7 @@ async function cmdCost(args) {
   const target = args[0];
   if (!target) { console.error('Point me at something: notugly cost stripe.com'); process.exit(2); }
   const cost = costOf(await readDna(target));
+  if (wantsJson()) return printJson(cost);
   console.log(`\n  ${bold(target)}\n`);
   console.log(`  ${dim('weight'.padEnd(12))} ${cost.weight.kb} kB of webfont${cost.weight.names.length ? dim(`  (${cost.weight.names.join(', ')})`) : ''}`);
   console.log(`  ${' '.repeat(12)} ${dim(cost.weight.note)}\n`);
@@ -916,6 +939,12 @@ async function cmdWatch(args) {
 
   const before = JSON.parse(readFileSync(file, 'utf8'));
   const report = drift(before, now);
+  if (wantsJson()) {
+    printJson(report);
+    if (has('update')) writeFileSync(file, JSON.stringify(now, null, 2));
+    if (report.level === 'error' && has('strict')) process.exit(1);
+    return;
+  }
   console.log('\n' + driftText(report) + '\n');
   if (has('update')) {
     writeFileSync(file, JSON.stringify(now, null, 2));
@@ -932,28 +961,31 @@ async function cmdCheck(args) {
   const dna = await readDna(target);
   const page = onePager(dna, { title: target });
   const spec = specSheet(dna);
+  const maxGreys = Number(flag('max-greys', 8));
+  const maxFonts = Number(flag('max-fonts', 3));
+
+  const extra = [];
+  if (spec.greys > maxGreys) extra.push({ kind: 'greys', says: `${spec.greys} greys (limit ${maxGreys})` });
+  if (spec.type.families.length > maxFonts) extra.push({ kind: 'fonts', says: `${spec.type.families.length} typefaces (limit ${maxFonts})` });
+  const problemCount = page.failing.length + extra.length;
+
+  if (wantsJson()) {
+    printJson({ target, failing: page.failing, extra, problemCount, passed: problemCount === 0 });
+    if (problemCount) process.exit(1);
+    return;
+  }
 
   console.log(`\n  ${bold('notugly check')}  ${dim(target)}\n`);
   for (const p of page.failing) {
     console.log(`  ${c(31, '✗')} ${p.fg} on ${p.over} is ${p.ratio}:1 ${dim(`(needs ${p.target})`)}${p.fix ? dim(` → ${p.fix}`) : ''}`);
   }
-  const maxGreys = Number(flag('max-greys', 8));
-  const maxFonts = Number(flag('max-fonts', 3));
-  const problems = [...page.failing];
-  if (spec.greys > maxGreys) {
-    console.log(`  ${c(31, '✗')} ${spec.greys} greys (limit ${maxGreys})`);
-    problems.push('greys');
-  }
-  if (spec.type.families.length > maxFonts) {
-    console.log(`  ${c(31, '✗')} ${spec.type.families.length} typefaces (limit ${maxFonts})`);
-    problems.push('fonts');
-  }
+  for (const e of extra) console.log(`  ${c(31, '✗')} ${e.says}`);
 
-  if (!problems.length) {
+  if (!problemCount) {
     console.log(`  ${c(32, '✓ nothing to report')}\n`);
     return;
   }
-  console.log(`\n  ${c(31, `${problems.length} problem(s).`)} ${dim('Exit code 1 — this is the bit that fails a build.')}\n`);
+  console.log(`\n  ${c(31, `${problemCount} problem(s).`)} ${dim('Exit code 1 — this is the bit that fails a build.')}\n`);
   process.exit(1);
 }
 
@@ -961,6 +993,11 @@ function cmdTokens(args) {
   const file = args[0];
   if (!file) { console.error('Which file? Try: notugly tokens tokens.json'); process.exit(2); }
   const report = auditTokens(JSON.parse(readFileSync(file, 'utf8')), { name: file });
+  if (wantsJson()) {
+    printJson(report);
+    if (!report.passed && has('strict')) process.exit(1);
+    return;
+  }
   console.log(`\n  ${bold(file)}  ${dim(`${report.counted} colours, ${report.greys} grey`)}\n`);
   for (const f of report.findings.slice(0, 20)) {
     console.log(`  ${f.level === 'error' ? c(31, '✗') : c(33, '!')} ${f.says}`);
