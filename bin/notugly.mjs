@@ -38,8 +38,8 @@ import { gradient, KINDS as GRADIENT_KINDS } from '../lib/gradient.mjs';
 import { pattern, PATTERNS } from '../lib/pattern.mjs';
 import { blob, divider, DIVIDERS } from '../lib/shape.mjs';
 import { paletteFromImage, paletteFromImages } from '../lib/quantise.mjs';
-import { decodePng } from '../lib/raster.mjs';
-import { iconPackage, ICON_SIZES } from '../lib/icon.mjs';
+import { decodePng } from '../lib/node/raster.mjs';
+import { iconPackage, ICON_SIZES } from '../lib/node/icon.mjs';
 import { checkSystemRtl } from '../lib/rtl.mjs';
 import { accessibilityStatement } from '../lib/statement.mjs';
 import { benchmark } from '../lib/benchmark.mjs';
@@ -751,10 +751,10 @@ function cmdPrint(args) {
 }
 
 // --- other targets ----------------------------------------------------------
-function cmdTarget(args, name, make, hint, cmdName = name.toLowerCase().replace(/\s.*/, '')) {
+async function cmdTarget(args, name, make, hint, cmdName = name.toLowerCase().replace(/\s.*/, '')) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
-  const files = make(sys);
+  const files = await make(sys);
   const out = flag('out', null);
   if (!out) {
     console.log(`\n  ${bold(name)}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
@@ -1242,10 +1242,10 @@ switch (cmd) {
     cmdPrint(argv.slice(1));
     break;
   case 'figma':
-    cmdTarget(argv.slice(1), 'Figma plugin', toFigma, 'Plugins → Development → Import plugin from manifest.');
+    await cmdTarget(argv.slice(1), 'Figma plugin', toFigma, 'Plugins → Development → Import plugin from manifest.');
     break;
   case 'vscode':
-    cmdTarget(argv.slice(1), 'VS Code extension', toVsCodeExtension, "A publishable scaffold — set 'publisher' in package.json, then vsce package.", 'vscode');
+    await cmdTarget(argv.slice(1), 'VS Code extension', toVsCodeExtension, "A publishable scaffold — set 'publisher' in package.json, then vsce package.", 'vscode');
     break;
   case 'spec':
     await cmdSpec(argv.slice(1));

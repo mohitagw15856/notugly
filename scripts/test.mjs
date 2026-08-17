@@ -38,9 +38,9 @@ import { extractFromCss, summarise } from '../lib/extract.mjs';
 import { TOOLS as MCP_TOOLS, callTool as mcpCallTool } from '../mcp/server.mjs';
 import { seedChangelog } from '../lib/changelog.mjs';
 import { glassMaterial, glassLegibility, concentricRadius, squirclePath, WORST_CASE_BACKGROUNDS } from '../lib/liquidglass.mjs';
-import { encodePng, decodePng, encodeIco } from '../lib/raster.mjs';
-import { iconPixels, iconPackage, ICON_SIZES } from '../lib/icon.mjs';
-import { glyphFor } from '../lib/font5x7.mjs';
+import { encodePng, decodePng, encodeIco } from '../lib/node/raster.mjs';
+import { iconPixels, iconPackage, ICON_SIZES } from '../lib/node/icon.mjs';
+import { glyphFor } from '../lib/node/font5x7.mjs';
 import { checkRtl, checkSystemRtl } from '../lib/rtl.mjs';
 import { accessibilityStatement } from '../lib/statement.mjs';
 import { benchmark, APPROACHES } from '../lib/benchmark.mjs';
@@ -1438,8 +1438,13 @@ t('brandDistinct flags two brand colours close enough to be mistaken for one', (
 });
 
 // --- VS Code extension scaffold ----------------------------------------------
+// toVsCodeExtension is async (it dynamically imports icon.mjs/raster.mjs so
+// that the browser-loaded half of this codebase never has to resolve
+// node:zlib — see the comment in lib/targets.mjs) — resolved up front since
+// the `t()` runner itself is synchronous.
+const vsCodeExtensionFiles = await toVsCodeExtension(system('exp'));
 t('the VS Code extension scaffold is a real 128px icon plus a valid, publisher-flagged package.json', () => {
-  const files = toVsCodeExtension(system('exp'));
+  const files = vsCodeExtensionFiles;
   const pkg = JSON.parse(files['package.json']);
   eq(pkg.icon, 'icon.png');
   ok(pkg.publisher, 'package.json must declare a publisher field, even a placeholder one');
