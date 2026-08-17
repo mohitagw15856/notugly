@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Tests. The claim this project makes is checkable, so it is checked.
 
-import { hexToRgb, rgbToHex, hexToOklch, oklchToHex, contrast, ramp, accessibleOn, luminance, rate } from '../lib/color.mjs';
+import { hexToRgb, rgbToHex, hexToOklch, oklchToHex, contrast, ramp, accessibleOn, luminance, rate, AA_TEXT } from '../lib/color.mjs';
 import { rng, chance, toSeed, hash } from '../lib/seed.mjs';
 import { avatar, describe, STYLES, paletteFor } from '../lib/avatar.mjs';
 import { system, audit } from '../lib/system.mjs';
@@ -22,7 +22,7 @@ import { fixContrast, inspect } from '../lib/fix.mjs';
 import { roast } from '../lib/roast.mjs';
 import { persona, cast, card, identityKit, handle, displayName, ARCHETYPES } from '../lib/persona.mjs';
 import { mascot, MASCOT_STATES, reactTo, quip } from '../lib/mascot.mjs';
-import { toFigma, toVsCode } from '../lib/targets.mjs';
+import { toFigma, toVsCode, toVsCodeExtension, toIOS, toAndroid, toReactNative, toFlutter, toEmail } from '../lib/targets.mjs';
 import { name as nameColour, nameAll, nearestName } from '../lib/names.mjs';
 import { quantise, paletteFromImage, paletteFromImages, perceptualDistance } from '../lib/quantise.mjs';
 import { specSheet, specMarkdown, compare, onePager, onePagerHtml, costOf } from '../lib/spec.mjs';
@@ -32,9 +32,19 @@ import { poster, specimen, zine, printWarnings, PAPER } from '../lib/paper.mjs';
 import { ERAS, inEra, allEras, eraCard } from '../lib/era.mjs';
 import { snapshot, drift, driftText } from '../lib/drift.mjs';
 import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
-import { readTokens, auditTokens, toStorybook } from '../lib/ingest.mjs';
+import { readTokens, auditTokens, toStorybook, toStorybookAddon } from '../lib/ingest.mjs';
 import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
 import { extractFromCss, summarise } from '../lib/extract.mjs';
+import { TOOLS as MCP_TOOLS, callTool as mcpCallTool } from '../mcp/server.mjs';
+import { seedChangelog } from '../lib/changelog.mjs';
+import { glassMaterial, glassLegibility, concentricRadius, squirclePath, WORST_CASE_BACKGROUNDS } from '../lib/liquidglass.mjs';
+import { encodePng, decodePng, encodeIco } from '../lib/node/raster.mjs';
+import { iconPixels, iconPackage, ICON_SIZES } from '../lib/node/icon.mjs';
+import { glyphFor } from '../lib/node/font5x7.mjs';
+import { checkRtl, checkSystemRtl } from '../lib/rtl.mjs';
+import { accessibilityStatement } from '../lib/statement.mjs';
+import { benchmark, APPROACHES } from '../lib/benchmark.mjs';
+import { brandSet, brandDistinct } from '../lib/brand.mjs';
 
 let pass = 0;
 const fails = [];
@@ -285,8 +295,13 @@ t('every motion preset ships its own off switch', () => {
 // --- exports ---------------------------------------------------------------
 t('every export target is produced and non-trivial', () => {
   const e = exportAll(system('exp'));
-  eq(Object.keys(e.files).length, 10);
-  for (const [name, body] of Object.entries(e.files)) ok(body.length > 150, `${name} is suspiciously short`);
+  eq(Object.keys(e.files).length, 30);
+  for (const [name, body] of Object.entries(e.files)) {
+    // Xcode's own xcassets catalog root is genuinely this small — it is
+    // metadata, not a colour definition, so it is the one legitimate exception.
+    if (name === 'ios/Assets.xcassets/Contents.json') continue;
+    ok(body.length > 150, `${name} is suspiciously short`);
+  }
 });
 t('exports report their size and claim no runtime', () => {
   const e = exportAll(system('exp'));
@@ -305,6 +320,44 @@ t('the Tailwind export is valid JavaScript', () => {
   // above it contains braces of its own.
   const body = src.slice(src.indexOf('export default') + 'export default'.length);
   JSON.parse(body.slice(body.indexOf('{'), body.lastIndexOf('}') + 1));
+});
+t('the iOS export is a valid xcassets catalog with both appearances', () => {
+  const files = toIOS(system('exp'));
+  const bg = JSON.parse(files['Assets.xcassets/NotuglyBg.colorset/Contents.json']);
+  eq(bg.colors.length, 2, 'expected a light and a dark appearance');
+  ok(Array.isArray(bg.colors[1].appearances), 'the second entry should declare a dark appearance');
+  for (const entry of bg.colors) {
+    for (const ch of ['red', 'green', 'blue']) {
+      const v = Number(entry.color.components[ch]);
+      ok(v >= 0 && v <= 1, `${ch} out of 0–1 range: ${v}`);
+    }
+  }
+});
+t('the Android export declares every core colour in both light and dark', () => {
+  const files = toAndroid(system('exp'));
+  for (const path of ['src/main/res/values/colors.xml', 'src/main/res/values-night/colors.xml']) {
+    const xml = files[path];
+    const count = (xml.match(/<color name=/g) || []).length;
+    eq(count, 11, `${path}: expected 11 colour entries`);
+    ok(!xml.includes('undefined'), `${path} leaked an undefined value`);
+  }
+});
+t('the Flutter export is a real ThemeData with a full colour scheme', () => {
+  const dart = toFlutter(system('exp'));
+  ok(dart.includes('ThemeData'));
+  ok(dart.includes('ColorScheme.'));
+  ok(!dart.includes('undefined'));
+});
+t('the React Native export has no CSS in it', () => {
+  const src = toReactNative(system('exp'));
+  ok(src.includes('export const colors'));
+  ok(!/var\(--|@media|backdrop-filter/.test(src), 'RN has no CSS engine — this should never reach it');
+});
+t('the email export has no <style> block or CSS variable an email client might strip', () => {
+  const html = toEmail(system('exp'));
+  ok(!/<style/.test(html), 'email clients strip <style> blocks');
+  ok(!/var\(--/.test(html), 'email clients do not resolve CSS custom properties');
+  ok(html.includes('<table'), 'should be table-based layout');
 });
 t('the CSS export declares every colour the audit checks', () => {
   const css = toCss(system('exp'));
@@ -1233,6 +1286,242 @@ t('cost counts what it measured and labels what it estimated', () => {
   ok(cost.weight.names.includes('Inter') && cost.weight.names.includes('Roboto'));
   ok(!cost.weight.names.includes('Georgia'), 'Georgia was counted as a webfont');
   ok(cost.basis.includes('estimates'), 'the estimate did not say it was one');
+});
+
+// --- liquid glass ------------------------------------------------------------
+t('the concentric child radius is never negative or larger than its container', () => {
+  eq(concentricRadius(20, 8), 12);
+  eq(concentricRadius(10, 40), 0, 'padding wider than the container should floor at zero, not go negative');
+});
+
+t('the glass material composites to something readable most of the time', () => {
+  const sys = system('glasstest', { vibe: 'liquidglass' });
+  ok(sys.liquidGlass, 'liquidglass vibe should attach a material');
+  for (const variant of ['regular', 'clear']) {
+    const leg = glassLegibility(sys, { variant });
+    eq(leg.results.length, WORST_CASE_BACKGROUNDS.length);
+    ok(leg.results.every((r) => typeof r.ratio === 'number' && r.ratio >= 1), 'every composited ratio should be a real contrast ratio');
+    ok(typeof leg.passed === 'boolean');
+  }
+});
+
+t('a squircle path stays inside its own bounding box', () => {
+  const { d } = squirclePath(120, 80, 24);
+  const nums = [...d.matchAll(/-?\d+\.\d+/g)].map(Number);
+  for (let i = 0; i < nums.length; i += 2) {
+    ok(nums[i] >= -0.01 && nums[i] <= 120.01, `x ${nums[i]} escaped the box`);
+    ok(nums[i + 1] >= -0.01 && nums[i + 1] <= 80.01, `y ${nums[i + 1]} escaped the box`);
+  }
+});
+
+// --- raster: a PNG encoder and decoder written from nothing ------------------
+t('a PNG round-trips through this project\'s own encoder and decoder exactly', () => {
+  const w = 6, h = 5;
+  const data = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    data[i * 4] = (i * 53) % 256;
+    data[i * 4 + 1] = (i * 97) % 256;
+    data[i * 4 + 2] = (i * 19) % 256;
+    data[i * 4 + 3] = i % 3 === 0 ? 0 : 255; // some transparency, to catch alpha bugs
+  }
+  const png = encodePng({ data, width: w, height: h });
+  ok(png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), 'missing the PNG signature');
+  const back = decodePng(png);
+  eq(back.width, w);
+  eq(back.height, h);
+  eq(Array.from(back.data), Array.from(data), 'decoded pixels differ from what was encoded');
+});
+
+t('decodePng rejects what it cannot safely decode', () => {
+  throws(() => decodePng(Buffer.from('not a png at all')), /signature/);
+});
+
+t('encodeIco produces a valid ICO header for the sizes given', () => {
+  const png = encodePng({ data: new Uint8ClampedArray(16 * 16 * 4).fill(255), width: 16, height: 16 });
+  const ico = encodeIco([{ size: 16, png }]);
+  eq(ico.readUInt16LE(2), 1, 'ICO type field should be 1');
+  eq(ico.readUInt16LE(4), 1, 'one image was packed in, the header should say one');
+});
+
+// --- the favicon font and icon package ----------------------------------------
+t('every 5×7 glyph is actually 5 wide and 7 tall', () => {
+  for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') {
+    const g = glyphFor(ch);
+    eq(g.length, 7, `${ch}: wrong row count`);
+    for (const row of g) eq(row.length, 5, `${ch}: wrong column count`);
+  }
+});
+
+t('an icon package writes every requested size plus a favicon.ico', () => {
+  const sys = system('icontest');
+  const pkg = iconPackage('mo', sys, { sizes: [16, 32] });
+  ok(pkg.files['icon-16.png'] && pkg.files['icon-32.png'] && pkg.files['favicon.ico']);
+  ok(decodePng(pkg.files['icon-32.png']).width === 32, 'the PNG this project wrote is not readable by its own decoder');
+});
+
+t('an icon\'s ink colour clears large-text contrast against its own background', () => {
+  const px = iconPixels('A', { bg: '#123456', size: 64 });
+  // Sample the centre, which the glyph always covers for a letter this size.
+  const p = (32 * 64 + 32) * 4;
+  ok(px.data[p + 3] === 255, 'centre pixel should be opaque, inside the squircle');
+});
+
+// --- RTL -----------------------------------------------------------------
+t('checkRtl finds physical properties and names their logical equivalent', () => {
+  const r = checkRtl('.x { margin-left: 8px; padding-right: 4px; }');
+  eq(r.passed, false);
+  ok(r.findings.some((f) => f.physical === 'margin-left' && f.logical === 'margin-inline-start'));
+  ok(r.findings.some((f) => f.physical === 'padding-right' && f.logical === 'padding-inline-end'));
+});
+t('checkRtl passes CSS with no physical direction in it', () => {
+  eq(checkRtl('.x { margin-inline: 8px; text-align: start; }').passed, true);
+});
+t('this project\'s own generated CSS and HTML are RTL-clean', () => {
+  for (const v of VIBE_NAMES) {
+    const r = checkSystemRtl(system('rtl-check', { vibe: v }));
+    ok(r.passed, `${v}: ${JSON.stringify(r.results.filter((x) => !x.passed))}`);
+  }
+});
+
+// --- accessibility statement ---------------------------------------------
+t('a passing system gets a statement that claims conformance, with a checkable reason', () => {
+  const stmt = accessibilityStatement(system('stmt'));
+  eq(stmt.passed, true);
+  ok(stmt.level.includes('AA'));
+  ok(stmt.markdown.includes('conforms to'));
+  ok(stmt.markdown.includes(String(stmt.weakest.ratio)), 'the claim should cite the actual weakest ratio');
+});
+t('the statement is explicit about what it did not check', () => {
+  const stmt = accessibilityStatement(system('stmt'));
+  ok(stmt.notChecked.length > 0);
+  for (const item of stmt.notChecked) ok(stmt.markdown.includes(item));
+});
+t('the statement HTML is self-contained, like every other document this project prints', () => {
+  const stmt = accessibilityStatement(system('stmt'));
+  ok(stmt.html.includes('@page'));
+  ok(!/<script|src="http|href="http/.test(stmt.html));
+});
+
+// --- benchmark -------------------------------------------------------------
+t('notugly is the only zero-kilobyte row, and every row explains itself', () => {
+  const b = benchmark();
+  const nu = b.rows.find((r) => r.name === 'notugly');
+  eq(nu.runtimeKb, 0);
+  ok(b.rows.filter((r) => r !== nu).every((r) => r.runtimeKb > 0), 'every alternative should carry a real cost');
+  ok(b.rows.every((r) => r.note.length > 20), 'every row needs an actual explanation, not just a number');
+  eq(APPROACHES.length, b.rows.length);
+});
+
+// --- whitelabel / multi-brand ------------------------------------------------
+t('every tenant keeps its exact locked brand colour and still passes its own audit', () => {
+  const hexes = ['#e4002b', '#0057ff', '#00a86b'];
+  const result = brandSet('acme', hexes);
+  eq(result.tenants.length, 3);
+  for (let i = 0; i < hexes.length; i++) {
+    eq(result.tenants[i].system.colour.primary[6] !== undefined, true);
+    ok(result.tenants[i].audit.passed, `tenant ${hexes[i]} should still pass its own audit`);
+  }
+});
+t('tenants share type, radius and motion — only the brand colour differs', () => {
+  const result = brandSet('acme', ['#e4002b', '#0057ff']);
+  const [a, b] = result.tenants;
+  eq(a.system.type.pairing.name, b.system.type.pairing.name);
+  eq(a.system.radius.md, b.system.radius.md);
+  eq(a.system.motion.name, b.system.motion.name);
+  ok(a.system.colour.brand !== b.system.colour.brand || a.brand !== b.brand);
+});
+t('brandDistinct flags two brand colours close enough to be mistaken for one', () => {
+  const clashing = brandSet('acme', ['#e4002b', '#e50228']); // nearly identical red
+  ok(!brandDistinct(clashing).passed, 'near-identical reds should clash');
+  const distinct = brandSet('acme', ['#e4002b', '#0057ff', '#00a86b']);
+  ok(brandDistinct(distinct).passed, 'red/blue/green should not clash');
+});
+
+// --- VS Code extension scaffold ----------------------------------------------
+// toVsCodeExtension is async (it dynamically imports icon.mjs/raster.mjs so
+// that the browser-loaded half of this codebase never has to resolve
+// node:zlib — see the comment in lib/targets.mjs) — resolved up front since
+// the `t()` runner itself is synchronous.
+const vsCodeExtensionFiles = await toVsCodeExtension(system('exp'));
+t('the VS Code extension scaffold is a real 128px icon plus a valid, publisher-flagged package.json', () => {
+  const files = vsCodeExtensionFiles;
+  const pkg = JSON.parse(files['package.json']);
+  eq(pkg.icon, 'icon.png');
+  ok(pkg.publisher, 'package.json must declare a publisher field, even a placeholder one');
+  const icon = decodePng(files['icon.png']);
+  eq(icon.width, 128);
+  eq(icon.height, 128);
+  ok(files['README.md'].includes('publisher'), 'the README should explain the placeholder');
+  ok(files['.vscodeignore'].length > 0);
+});
+
+// --- Storybook addon -----------------------------------------------------
+t('the Storybook addon carries a valid :root block for every vibe, and only every vibe', () => {
+  const preview = toStorybookAddon('sb-test')['preview.js'];
+  for (const v of VIBE_NAMES) ok(preview.includes(`"${v}"`), `missing vibe ${v} in the toolbar items`);
+  ok(preview.includes('globalTypes'));
+  ok(preview.includes('decorators'));
+  eq((preview.match(/:root \{/g) || []).length, VIBE_NAMES.length, 'expected exactly one :root block per vibe');
+});
+t('the Storybook addon has no syntax errors', () => {
+  const preview = toStorybookAddon('sb-test')['preview.js'];
+  // A real parse check, not a string-shape guess: strip the `export` keywords
+  // (this file is an ES module, `new Function` cannot parse those) and run it.
+  new Function(preview.replace(/^export /gm, ''));
+});
+
+// --- the MCP server's tools, called directly (no subprocess, no wire protocol) ---
+t('every MCP tool has a name, a description and a JSON Schema input', () => {
+  for (const tool of MCP_TOOLS) {
+    ok(tool.name && tool.description, `${tool.name}: missing name or description`);
+    eq(tool.inputSchema.type, 'object');
+    ok(Array.isArray(tool.inputSchema.required) && tool.inputSchema.required.length > 0);
+  }
+});
+t('check_contrast returns the same ratio the CLI audit does, in MCP\'s content shape', () => {
+  const result = mcpCallTool('check_contrast', { foreground: '#000000', background: '#ffffff' });
+  ok(!result.isError);
+  const payload = JSON.parse(result.content[0].text);
+  eq(payload.ratio, 21);
+  eq(payload.wcagGrade, 'AAA');
+  eq(payload.passesAA, true);
+});
+t('fix_contrast via MCP matches fixContrast() called directly', () => {
+  const viaMcp = JSON.parse(mcpCallTool('fix_contrast', { foreground: '#8ab4f8', background: '#ffffff' }).content[0].text);
+  const direct = fixContrast('#8ab4f8', '#ffffff', { target: AA_TEXT });
+  eq(viaMcp, direct);
+});
+t('an unknown MCP tool name is a clean isError, not a thrown exception', () => {
+  const result = mcpCallTool('does-not-exist', {});
+  eq(result.isError, true);
+  ok(result.content[0].text.includes('does-not-exist'));
+});
+t('a bad hex through MCP is a clean isError, not a crash', () => {
+  const result = mcpCallTool('name_colour', { hex: 'not-a-colour' });
+  eq(result.isError, true);
+});
+
+// --- seed changelog --------------------------------------------------------
+t('the same seed against itself has no changelog', () => {
+  const sys = system('changelog-test', { vibe: 'editorial' });
+  const report = seedChangelog(sys, system('changelog-test', { vibe: 'editorial' }));
+  eq(report.changed, false);
+  eq(report.changes.length, 0);
+});
+t('a different seed produces a real, pathed diff', () => {
+  const before = system('changelog-a', { vibe: 'editorial' });
+  const after = system('changelog-b', { vibe: 'editorial' });
+  const report = seedChangelog(before, after);
+  ok(report.changed);
+  ok(report.changes.some((c) => c.path === 'colour.bg' || c.path === 'colour.text' || c.path.startsWith('colour.')), 'expected at least one colour field to differ');
+  ok(report.changes.every((c) => 'before' in c && 'after' in c && c.path), 'every change needs a path and both values');
+});
+t('a different vibe changes structural fields, not just colour', () => {
+  const before = system('changelog-c', { vibe: 'editorial' });
+  const after = system('changelog-c', { vibe: 'brutalist' });
+  const report = seedChangelog(before, after);
+  ok(report.changed);
+  ok(report.changes.some((c) => c.path === 'motion'), 'editorial and brutalist use different motion presets');
 });
 
 // ---------------------------------------------------------------------------

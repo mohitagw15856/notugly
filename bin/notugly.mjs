@@ -22,7 +22,7 @@ import { roast } from '../lib/roast.mjs';
 import { checkVision, simulate, VISION } from '../lib/vision.mjs';
 import { printReport } from '../lib/print.mjs';
 import { apcaAdvice } from '../lib/apca.mjs';
-import { toFigma, toVsCode } from '../lib/targets.mjs';
+import { toFigma, toVsCode, toVsCodeExtension } from '../lib/targets.mjs';
 import { specSheet, specMarkdown, compare, compareMarkdown, onePager, onePagerHtml, costOf } from '../lib/spec.mjs';
 import { name as nameColour, nameAll } from '../lib/names.mjs';
 import { toThmx, toSlidesGuide, toSlidesJson, chartLegibility } from '../lib/slides.mjs';
@@ -30,9 +30,26 @@ import { poster, specimen, zine, printWarnings, PAPER } from '../lib/paper.mjs';
 import { allEras, inEra, eraCard, ERAS } from '../lib/era.mjs';
 import { team, teamSheet, teamDistinct } from '../lib/team.mjs';
 import { snapshot, drift, driftText } from '../lib/drift.mjs';
-import { auditTokens, toStorybook } from '../lib/ingest.mjs';
+import { auditTokens, toStorybook, toStorybookAddon } from '../lib/ingest.mjs';
 import { sticker, stickerPack, STICKER_MOTIONS } from '../lib/persona.mjs';
-import { readFileSync, existsSync } from 'node:fs';
+import { glassMaterial, glassLegibility, concentricRadius, squirclePath, swiftGlassSnippet, VARIANTS as GLASS_VARIANTS } from '../lib/liquidglass.mjs';
+import { mascot, MASCOT_STATES } from '../lib/mascot.mjs';
+import { gradient, KINDS as GRADIENT_KINDS } from '../lib/gradient.mjs';
+import { pattern, PATTERNS } from '../lib/pattern.mjs';
+import { blob, divider, DIVIDERS } from '../lib/shape.mjs';
+import { paletteFromImage, paletteFromImages } from '../lib/quantise.mjs';
+import { decodePng } from '../lib/node/raster.mjs';
+import { iconPackage, ICON_SIZES } from '../lib/node/icon.mjs';
+import { checkSystemRtl } from '../lib/rtl.mjs';
+import { accessibilityStatement } from '../lib/statement.mjs';
+import { benchmark } from '../lib/benchmark.mjs';
+import { brandSet, brandDistinct } from '../lib/brand.mjs';
+import { seedChangelog } from '../lib/changelog.mjs';
+import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 const argv = process.argv.slice(2);
 const COLOR = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -45,6 +62,13 @@ const flag = (name, fallback = null) => {
   return i === -1 ? fallback : argv[i + 1];
 };
 const has = (name) => argv.includes(`--${name}`);
+
+// A subset of commands can print machine-readable output instead of the
+// formatted terminal report — for scripting (`notugly audit --json | jq`),
+// not for humans reading a terminal. Every command that supports it checks
+// this before it prints anything else.
+const wantsJson = () => has('json');
+const printJson = (obj) => console.log(JSON.stringify(obj, null, 2));
 
 // A block of colour in the terminal, using truecolor. In a pipe there is no
 // colour to show, so the caller prints the hex instead — printing both gives
@@ -74,7 +98,18 @@ function usage(code = 0) {
   ${bold('notugly vision')} [seed]             which colours collapse for colour-blind viewers
   ${bold('notugly print')} [seed]              what survives CMYK
   ${bold('notugly figma')} [seed]              a loadable Figma plugin
-  ${bold('notugly vscode')} [seed]             an editor theme from the same system
+  ${bold('notugly vscode')} [seed]             a publishable editor extension — theme, icon, README, changelog
+  ${bold('notugly glass')} [seed]              Apple's Liquid Glass, with the legibility actually checked
+  ${bold('notugly mascot')} [seed]             the small man who lives on the website, as SVG
+  ${bold('notugly gradient')} [seed]           a mesh gradient, as CSS or SVG — never a PNG
+  ${bold('notugly pattern')} <name>            grain, dots, grid, lines… as a data URI
+  ${bold('notugly shape')} <kind>              a blob or a section divider
+  ${bold('notugly palette')} <img.png...>      the colours in a photograph, no browser needed
+  ${bold('notugly icon')} <name>               a favicon + app-icon package, real PNG/ICO pixels
+  ${bold('notugly rtl')} [seed]                scans the generated CSS for left/right that should be logical
+  ${bold('notugly a11y-statement')} [seed]      a publishable statement — what conforms, what wasn't checked
+  ${bold('notugly benchmark')}                  the "0 bytes runtime" claim, with a number next to the alternative
+  ${bold('notugly mcp')}                        how to point an MCP client at check_contrast/fix_contrast/name_colour
 
 ${dim('for the people who have to present it')}
   ${bold('notugly spec')} <url>                what is that design made of, as a table
@@ -95,12 +130,16 @@ ${dim('for keeping it')}
   ${bold('notugly watch')} <url> [baseline]    what changed since last time
   ${bold('notugly check')} <url>               fail the build on a contrast regression
   ${bold('notugly tokens')} <file.json>        audit somebody else's tokens or Figma export
-  ${bold('notugly storybook')} [seed]          a Storybook story for the system
+  ${bold('notugly storybook')} [seed]          a story, plus a live toolbar switcher for every vibe
   ${bold('notugly team')} <org> <who...>       one seed, a whole company
+  ${bold('notugly brands')} <seed> <#hex...>   one product, several client brand colours, checked apart
+  ${bold('notugly changelog')} <seed>          did this seed's design change across two git refs of this repo
 
 ${dim('options')}  --vibe ${VIBE_NAMES.join('|')}   --dark   --style ${STYLES.slice(0, 4).join('|')}…
          --out <dir>   --size <px>   --seed <seed>   --brand <#hex>
          --mood neutral|happy|thinking|surprised|sleepy|determined   --hat party|beanie|shades|scarf|halo|crown
+         --json  raw output instead of the formatted report, on audit/vision/print/roast/fix/
+                 spec/diff/onepager/cost/watch/check/tokens — for scripting, not reading
 
 ${dim('Everything is deterministic: the same seed always gives the same design.')}`);
   process.exit(code);
@@ -247,6 +286,12 @@ function cmdAudit(args) {
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const a = audit(sys);
   const s = staticChecks(sys);
+  const pass0 = a.passed && s.passed;
+  if (wantsJson()) {
+    printJson({ seed: sys.seed, vibe: sys.vibe, audit: a, staticChecks: s, passed: pass0 });
+    if (!pass0) process.exit(1);
+    return;
+  }
 
   console.log(`\n  ${bold('Contrast')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
   for (const r of a.results) {
@@ -263,6 +308,254 @@ function cmdAudit(args) {
   const pass = a.passed && s.passed;
   console.log(`\n  ${pass ? c(32, 'Provably not ugly.') : c(31, 'Not yet.')}\n`);
   if (!pass) process.exit(1);
+}
+
+// --- liquid glass -------------------------------------------------------------
+function cmdGlass(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: 'liquidglass', dark: has('dark'), brand: flag('brand', null) });
+  const container = squirclePath(240, 140, sys.radius.lg);
+  const pad = 16;
+  const childRadius = concentricRadius(sys.radius.lg, pad);
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    for (const variant of GLASS_VARIANTS) {
+      writeFileSync(`${out}/glass-${variant}.css`, `.glass-${variant} {\n  ${sys.liquidGlass[variant].css}\n}\n`);
+      writeFileSync(`${out}/NotuglyGlass-${variant}.swift`, swiftGlassSnippet(sys, { variant }));
+    }
+    writeFileSync(`${out}/container.svg`, container.svg);
+    writeFileSync(`${out}/legibility.json`, JSON.stringify(sys.liquidGlass.legibility, null, 2));
+    console.log(`\n  Wrote ${bold(String(GLASS_VARIANTS.length * 2 + 2))} files to ${bold(out)}`);
+    console.log(`  ${dim('CSS for the web, .swift for the real API, an SVG squircle, and the legibility sweep as JSON.')}\n`);
+    return;
+  }
+
+  console.log(`\n  ${bold('Liquid Glass')}  ${dim(`seed ${sys.seed}${sys.dark ? ' · dark' : ''}`)}\n`);
+  for (const variant of GLASS_VARIANTS) {
+    const mat = sys.liquidGlass[variant];
+    console.log(`  ${bold(variant)}  ${dim(`alpha ${mat.alpha} · blur ${mat.blur}px · saturate ${mat.saturate}`)}`);
+    const leg = sys.liquidGlass.legibility[variant];
+    console.log(`  ${leg.passed ? c(32, '✓') : c(31, '✗')} ${dim(leg.note)}`);
+    console.log();
+  }
+  console.log(`  ${bold('Concentric radius')}  ${dim(`container ${sys.radius.lg}px, ${pad}px padding → child ${childRadius}px`)}`);
+  console.log(`  ${dim('Not container radius minus a guess — the child curve is centred on the same point as the parent.')}\n`);
+  console.log(`  ${dim(`notugly glass ${sys.seed} --out ./glass  writes CSS, Swift, the squircle SVG and the legibility sweep`)}\n`);
+}
+
+// --- mascot / gradient / pattern / shape ------------------------------------
+function cmdMascot(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const state = flag('mood', 'idle');
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    const states = has('all') ? MASCOT_STATES : [state];
+    for (const s of states) writeFileSync(`${out}/mascot-${s}.svg`, mascot(sys.colour, { state: s, size: Number(flag('size', 132)) }));
+    console.log(`\n  Wrote ${bold(String(states.length))} mascot SVG(s) to ${bold(out)}\n`);
+    return;
+  }
+  console.log(mascot(sys.colour, { state, size: Number(flag('size', 132)) }));
+}
+
+function cmdGradient(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const kind = flag('kind', null);
+  const grad = gradient(seed, { kind: kind || undefined, dark: has('dark') });
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    writeFileSync(`${out}/gradient.svg`, grad.svg);
+    writeFileSync(`${out}/gradient.css`, `.gradient {\n  ${grad.css}\n}\n`);
+    console.log(`\n  Wrote ${bold('2')} files to ${bold(out)}  ${dim(grad.kind)}\n`);
+    return;
+  }
+  console.log(`\n  ${bold(grad.kind)}  ${dim(`base ${grad.base}`)}\n`);
+  console.log(`  ${grad.stops.map((h) => swatch(h, 6)).join('')}`);
+  console.log(`\n  ${grad.css}\n`);
+  console.log(`  ${dim(`notugly gradient ${seed} --kind ${GRADIENT_KINDS.join('|')} --out ./g`)}\n`);
+}
+
+function cmdPattern(args) {
+  const name = args[0] || flag('name', 'dots');
+  const seed = flag('seed', 'notugly');
+  const pat = pattern(name, { colour: flag('colour', '#000000'), opacity: Number(flag('opacity', 0.08)), seed });
+  const out = flag('out', null);
+
+  if (out) {
+    mkdirSync(out, { recursive: true });
+    writeFileSync(`${out}/pattern.svg`, pat.svg);
+    writeFileSync(`${out}/pattern.css`, `.pattern {\n  ${pat.css}\n}\n`);
+    console.log(`\n  Wrote ${bold('2')} files to ${bold(out)}  ${dim(`${pat.name} · ${pat.bytes} B`)}\n`);
+    return;
+  }
+  console.log(`\n  ${bold(pat.name)}  ${dim(`${pat.bytes} B as a data URI`)}\n`);
+  console.log(`  ${pat.css}\n`);
+  console.log(`  ${dim(`notugly pattern ${PATTERNS.join('|')} --out ./p`)}\n`);
+}
+
+function cmdShape(args) {
+  const kind = args[0] || flag('kind', 'blob');
+  const seed = flag('seed', 'notugly');
+  const out = flag('out', null);
+
+  if (kind === 'blob') {
+    const b = blob(seed, { size: Number(flag('size', 200)) });
+    if (out) { writeFileSync(out, b.svg); console.log(`\n  Wrote ${bold(out)}\n`); return; }
+    console.log(b.svg);
+    console.log(`\n  ${dim('notugly shape blob --out blob.svg')}\n`);
+    return;
+  }
+  const d = divider(kind, { flip: has('flip'), seed });
+  if (out) { writeFileSync(out, d.svg); console.log(`\n  Wrote ${bold(out)}\n`); return; }
+  console.log(d.svg);
+  console.log(`\n  ${dim(`notugly shape ${DIVIDERS.join('|')}|blob --out shape.svg`)}\n`);
+}
+
+// --- palette from an image ---------------------------------------------------
+function cmdPalette(args) {
+  const files = args.filter((a) => !a.startsWith('--'));
+  if (!files.length) {
+    console.error('Which image? Try: notugly palette photo.png');
+    process.exit(2);
+  }
+  const notPng = files.find((f) => !/\.png$/i.test(f));
+  if (notPng) {
+    console.error(`\n  "${notPng}" isn't a .png — only PNG is supported here.`);
+    console.error(`  The decoder is written from scratch to stay zero-dependency; re-export as PNG and try again.\n`);
+    process.exit(2);
+  }
+
+  let images;
+  try {
+    images = files.map((f) => decodePng(readFileSync(f)));
+  } catch (e) {
+    console.error(`\n  ${e.message}\n`);
+    process.exit(1);
+  }
+
+  const keep = Number(flag('keep', 5));
+  const result = images.length > 1 ? paletteFromImages(images, { keep }) : paletteFromImage(images[0], { keep });
+
+  console.log(`\n  ${bold(images.length > 1 ? `${files.length} images` : files[0])}  ${dim(`${result.colours.length} colours, deterministic k-means in OKLab`)}\n`);
+  for (const col of result.colours) {
+    console.log(`  ${swatch(col.hex)} ${col.hex.padEnd(9)} ${dim(`${(col.share * 100).toFixed(1)}%`)}`);
+  }
+  console.log(`\n  ${dim('dominant')} ${swatch(result.dominant)} ${result.dominant}   ${dim('ground')} ${swatch(result.ground)} ${result.ground}`);
+  if (result.monochrome) console.log(`  ${dim('This image is close to monochrome — that is what came out of it, not an error.')}`);
+
+  const out = flag('out', null);
+  if (out) {
+    writeFileSync(out, JSON.stringify(result, null, 2));
+    console.log(`\n  Wrote ${bold(out)}\n`);
+    return;
+  }
+  console.log(`\n  ${dim(`notugly --brand ${result.dominant}  builds a system pinned to it`)}\n`);
+}
+
+// --- favicon / app icon -------------------------------------------------------
+function cmdIcon(args) {
+  const name = args[0];
+  if (!name) {
+    console.error('Whose icon? Try: notugly icon mo');
+    process.exit(2);
+  }
+  const sys = system(name, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const sizes = flag('sizes', null) ? flag('sizes').split(',').map(Number) : ICON_SIZES;
+  const pkg = iconPackage(name, sys, { sizes });
+  const out = flag('out', null);
+
+  if (!out) {
+    console.log(`\n  ${bold('Icon')}  ${dim(`letter ${pkg.letter} · ${swatch(pkg.bg)} ${pkg.bg} · ${sizes.join(', ')}px`)}\n`);
+    for (const [f, body] of Object.entries(pkg.files)) {
+      console.log(`  ${f.padEnd(16)} ${dim(`${(body.length / 1024).toFixed(1)} kB`)}`);
+    }
+    console.log(`\n  ${dim('Real pixels, encoded from scratch — no sharp, no canvas, no dependency.')}`);
+    console.log(`  ${dim(`notugly icon ${name} --out ./icons  writes them`)}\n`);
+    return;
+  }
+  mkdirSync(out, { recursive: true });
+  for (const [f, body] of Object.entries(pkg.files)) writeFileSync(`${out}/${f}`, body);
+  console.log(`\n  Wrote ${bold(String(Object.keys(pkg.files).length))} files to ${bold(out)}\n`);
+}
+
+// --- right to left -------------------------------------------------------------
+function cmdRtl(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const report = checkSystemRtl(sys);
+
+  console.log(`\n  ${bold('RTL readiness')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
+  for (const r of report.results) {
+    if (!r.findings.length) {
+      console.log(`  ${c(32, '✓')} ${r.label}  ${dim('no physical left/right — margin, padding, border and text-align are all logical')}`);
+      continue;
+    }
+    console.log(`  ${c(31, '✗')} ${r.label}`);
+    for (const f of r.findings) console.log(`      ${dim(f.says)}`);
+  }
+
+  const sample = CASES.find((x) => x.id === 'rtl');
+  console.log(`\n  ${dim('Sample text')}  ${sample.text}`);
+  console.log(`  ${dim(sample.why)}`);
+  console.log(`\n  ${dim('This checks the generated stylesheet for physical properties — it cannot see a mirrored layout you wrote by hand.')}\n`);
+  if (!report.passed && has('strict')) process.exit(1);
+}
+
+// --- accessibility statement ---------------------------------------------------
+function cmdStatement(args) {
+  const seed = args[0] || flag('seed', 'notugly');
+  const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
+  const stmt = accessibilityStatement(sys, { org: flag('org', null), url: flag('url', null), contact: flag('contact', null) });
+  const out = flag('out', null);
+
+  if (out) {
+    writeFileSync(out, out.endsWith('.html') ? stmt.html : stmt.markdown);
+    console.log(`\n  Wrote ${bold(out)}\n`);
+    return;
+  }
+  console.log(`\n${stmt.markdown}\n`);
+  console.log(`  ${dim(`notugly a11y-statement ${sys.seed} --out statement.html  writes the printable version`)}\n`);
+}
+
+// --- benchmark -----------------------------------------------------------------
+function cmdBenchmark() {
+  const b = benchmark();
+  if (wantsJson()) return printJson(b);
+
+  console.log(`\n  ${bold('What "no runtime" is actually worth')}  ${dim(`typical use, gzipped/minified, ${b.asOf}`)}\n`);
+  for (const r of b.rows) {
+    const kb = r.runtimeKb === 0 ? c(32, '0 kB') : `${String(r.runtimeKb).padStart(3)} kB`;
+    console.log(`  ${r.name.padEnd(38)} ${dim(r.kind.padEnd(20))} ${bold(kb)}`);
+    console.log(`  ${' '.repeat(38)} ${dim(r.note)}\n`);
+  }
+  console.log(`  ${dim(b.note)}\n`);
+}
+
+// --- mcp -----------------------------------------------------------------------
+function cmdMcp() {
+  console.log(`
+  ${bold('notugly is also an MCP server')}
+
+  Three tools, straight off this library — no separate service, no API key:
+
+    ${bold('check_contrast')}   WCAG 2.1 and APCA between two colours
+    ${bold('fix_contrast')}     the nearest passing colour to one you picked
+    ${bold('name_colour')}      what colour is that, in words
+
+  Point an MCP client at it directly (it speaks stdio, not this CLI's argv):
+
+    ${dim('node ' + new URL('../mcp/server.mjs', import.meta.url).pathname)}
+
+  Or, from an MCP client's own config:
+
+  ${dim(JSON.stringify({ mcpServers: { notugly: { command: 'node', args: [new URL('../mcp/server.mjs', import.meta.url).pathname] } } }, null, 2).split('\n').join('\n  '))}
+`);
 }
 
 // --- odds and ends ----------------------------------------------------------
@@ -375,6 +668,7 @@ function cmdFix(args) {
     process.exit(2);
   }
   const i = inspect(fg, bg);
+  if (wantsJson()) return printJson(i);
   console.log(`\n  ${swatch(fg)} ${fg}  ${dim('on')}  ${swatch(bg)} ${bg}\n`);
   console.log(`  ${bold('WCAG 2')}    ${i.wcag.ratio}:1  ${i.wcag.aa ? c(32, i.wcag.grade) : c(31, 'fail')}  ${dim('needs 4.5 for body text')}`);
   console.log(`  ${bold('APCA')}      Lc ${i.apca.lc}  ${dim(i.apca.use)}\n`);
@@ -402,6 +696,7 @@ function cmdRoast(args) {
     process.exit(2);
   }
   const r = roast(colours);
+  if (wantsJson()) return printJson(r);
   console.log(`\n  ${bold(r.verdict)}  ${dim(`${r.score}/100`)}\n`);
   for (const b of r.burns) {
     const mark = b.severity >= 4 ? c(31, '✗') : b.severity >= 2 ? c(33, '!') : dim('·');
@@ -416,6 +711,7 @@ function cmdVision(args) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const v = checkVision(sys.colour);
+  if (wantsJson()) return printJson({ seed: sys.seed, vibe: sys.vibe, ...v });
 
   console.log(`\n  ${bold('Colour vision')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
   const roles = ['bg', 'surface', 'text', 'textMuted', 'brand', 'accent', 'buttonBg', 'border'];
@@ -440,6 +736,7 @@ function cmdPrint(args) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const r = printReport(sys.colour);
+  if (wantsJson()) return printJson({ seed: sys.seed, vibe: sys.vibe, ...r });
   console.log(`\n  ${bold('On paper')}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
   for (const check of r.checks) {
     const flagged = check.notes.length;
@@ -454,10 +751,10 @@ function cmdPrint(args) {
 }
 
 // --- other targets ----------------------------------------------------------
-function cmdTarget(args, name, make, hint) {
+async function cmdTarget(args, name, make, hint, cmdName = name.toLowerCase().replace(/\s.*/, '')) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
-  const files = make(sys);
+  const files = await make(sys);
   const out = flag('out', null);
   if (!out) {
     console.log(`\n  ${bold(name)}  ${dim(`${sys.vibeLabel} · seed ${sys.seed}`)}\n`);
@@ -465,7 +762,7 @@ function cmdTarget(args, name, make, hint) {
       console.log(`  ${f.padEnd(36)} ${dim(`${(Buffer.byteLength(body) / 1024).toFixed(1)} kB`)}`);
     }
     console.log(`\n  ${dim(hint)}`);
-    console.log(`  ${dim(`notugly ${name.toLowerCase().replace(/\s.*/, '')} ${sys.seed} --out ./${name.toLowerCase().split(' ')[0]}  writes them`)}\n`);
+    console.log(`  ${dim(`notugly ${cmdName} ${sys.seed} --out ./${cmdName}  writes them`)}\n`);
     return;
   }
   for (const [f, body] of Object.entries(files)) {
@@ -491,6 +788,7 @@ async function cmdSpec(args) {
   if (!target) { console.error('What am I looking at? Try: notugly spec stripe.com'); process.exit(2); }
   const dna = await readDna(target);
   const spec = specSheet(dna);
+  if (wantsJson()) return printJson(spec);
   const out = flag('out', null);
   if (out) { writeFileSync(out, specMarkdown(spec)); console.log(`\n  Wrote ${bold(out)}\n`); return; }
 
@@ -514,6 +812,7 @@ async function cmdDiff(args) {
   const [a, b] = args.filter((x) => !x.startsWith('--'));
   if (!a || !b) { console.error('Two things to compare: notugly diff stripe.com linear.app'); process.exit(2); }
   const cmp = compare(await readDna(a), await readDna(b), { labels: [a, b] });
+  if (wantsJson()) return printJson(cmp);
   const out = flag('out', null);
   if (out) { writeFileSync(out, compareMarkdown(cmp)); console.log(`\n  Wrote ${bold(out)}\n`); return; }
 
@@ -533,6 +832,7 @@ async function cmdOnePager(args) {
     ? await readDna(target)
     : system(target || flag('seed', 'notugly'), { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
   const page = onePager(input, { title: flag('title', target ? `${target} — accessibility review` : 'Accessibility review') });
+  if (wantsJson()) return printJson(page);
   const out = flag('out', null);
   if (out) {
     writeFileSync(out, onePagerHtml(page));
@@ -555,6 +855,7 @@ async function cmdCost(args) {
   const target = args[0];
   if (!target) { console.error('Point me at something: notugly cost stripe.com'); process.exit(2); }
   const cost = costOf(await readDna(target));
+  if (wantsJson()) return printJson(cost);
   console.log(`\n  ${bold(target)}\n`);
   console.log(`  ${dim('weight'.padEnd(12))} ${cost.weight.kb} kB of webfont${cost.weight.names.length ? dim(`  (${cost.weight.names.join(', ')})`) : ''}`);
   console.log(`  ${' '.repeat(12)} ${dim(cost.weight.note)}\n`);
@@ -684,6 +985,12 @@ async function cmdWatch(args) {
 
   const before = JSON.parse(readFileSync(file, 'utf8'));
   const report = drift(before, now);
+  if (wantsJson()) {
+    printJson(report);
+    if (has('update')) writeFileSync(file, JSON.stringify(now, null, 2));
+    if (report.level === 'error' && has('strict')) process.exit(1);
+    return;
+  }
   console.log('\n' + driftText(report) + '\n');
   if (has('update')) {
     writeFileSync(file, JSON.stringify(now, null, 2));
@@ -700,28 +1007,31 @@ async function cmdCheck(args) {
   const dna = await readDna(target);
   const page = onePager(dna, { title: target });
   const spec = specSheet(dna);
+  const maxGreys = Number(flag('max-greys', 8));
+  const maxFonts = Number(flag('max-fonts', 3));
+
+  const extra = [];
+  if (spec.greys > maxGreys) extra.push({ kind: 'greys', says: `${spec.greys} greys (limit ${maxGreys})` });
+  if (spec.type.families.length > maxFonts) extra.push({ kind: 'fonts', says: `${spec.type.families.length} typefaces (limit ${maxFonts})` });
+  const problemCount = page.failing.length + extra.length;
+
+  if (wantsJson()) {
+    printJson({ target, failing: page.failing, extra, problemCount, passed: problemCount === 0 });
+    if (problemCount) process.exit(1);
+    return;
+  }
 
   console.log(`\n  ${bold('notugly check')}  ${dim(target)}\n`);
   for (const p of page.failing) {
     console.log(`  ${c(31, '✗')} ${p.fg} on ${p.over} is ${p.ratio}:1 ${dim(`(needs ${p.target})`)}${p.fix ? dim(` → ${p.fix}`) : ''}`);
   }
-  const maxGreys = Number(flag('max-greys', 8));
-  const maxFonts = Number(flag('max-fonts', 3));
-  const problems = [...page.failing];
-  if (spec.greys > maxGreys) {
-    console.log(`  ${c(31, '✗')} ${spec.greys} greys (limit ${maxGreys})`);
-    problems.push('greys');
-  }
-  if (spec.type.families.length > maxFonts) {
-    console.log(`  ${c(31, '✗')} ${spec.type.families.length} typefaces (limit ${maxFonts})`);
-    problems.push('fonts');
-  }
+  for (const e of extra) console.log(`  ${c(31, '✗')} ${e.says}`);
 
-  if (!problems.length) {
+  if (!problemCount) {
     console.log(`  ${c(32, '✓ nothing to report')}\n`);
     return;
   }
-  console.log(`\n  ${c(31, `${problems.length} problem(s).`)} ${dim('Exit code 1 — this is the bit that fails a build.')}\n`);
+  console.log(`\n  ${c(31, `${problemCount} problem(s).`)} ${dim('Exit code 1 — this is the bit that fails a build.')}\n`);
   process.exit(1);
 }
 
@@ -729,6 +1039,11 @@ function cmdTokens(args) {
   const file = args[0];
   if (!file) { console.error('Which file? Try: notugly tokens tokens.json'); process.exit(2); }
   const report = auditTokens(JSON.parse(readFileSync(file, 'utf8')), { name: file });
+  if (wantsJson()) {
+    printJson(report);
+    if (!report.passed && has('strict')) process.exit(1);
+    return;
+  }
   console.log(`\n  ${bold(file)}  ${dim(`${report.counted} colours, ${report.greys} grey`)}\n`);
   for (const f of report.findings.slice(0, 20)) {
     console.log(`  ${f.level === 'error' ? c(31, '✗') : c(33, '!')} ${f.says}`);
@@ -741,13 +1056,18 @@ function cmdTokens(args) {
 function cmdStorybook(args) {
   const seed = args[0] || flag('seed', 'notugly');
   const sys = system(seed, { vibe: flag('vibe', 'editorial'), dark: has('dark'), brand: flag('brand', null) });
-  const files = { ...toStorybook(sys), 'notugly.css': exportAll(sys).files['notugly.css'] };
+  const files = {
+    ...toStorybook(sys),
+    'notugly.css': exportAll(sys).files['notugly.css'],
+    ...(has('no-addon') ? {} : toStorybookAddon(seed, { dark: has('dark') })),
+  };
   const out = flag('out', null);
   if (!out) { console.log(Object.values(files)[0]); return; }
   mkdirSync(out, { recursive: true });
   for (const [f, body] of Object.entries(files)) writeFileSync(`${out}/${f}`, body);
   console.log(`\n  Wrote ${bold(String(Object.keys(files).length))} files to ${bold(out)}`);
-  console.log(`  ${dim('Plain CSF3 — no framework import, so it works in any Storybook.')}\n`);
+  console.log(`  ${dim('Plain CSF3 — no framework import, so it works in any Storybook.')}`);
+  console.log(`  ${dim("Plus preview.js: a toolbar control that switches every story's vibe live — see ADDON.md.")}\n`);
 }
 
 function cmdTeam(args) {
@@ -769,6 +1089,112 @@ function cmdTeam(args) {
     console.log(`  Wrote ${bold(String(t.members.length + 1))} files to ${bold(out)}`);
   }
   console.log();
+}
+
+// --- whitelabel / multi-brand ------------------------------------------------
+function cmdBrands(args) {
+  const positional = args.filter((a) => !a.startsWith('--') && !a.startsWith('#'));
+  const hexes = args.filter((a) => a.startsWith('#'));
+  const seed = positional[0];
+  if (!seed || hexes.length < 2) {
+    console.error('Try: notugly brands acme "#e4002b" "#0057ff" "#00a86b"');
+    process.exit(2);
+  }
+  const result = brandSet(seed, hexes, { vibe: flag('vibe', 'editorial'), dark: has('dark') });
+  const check = brandDistinct(result);
+  if (wantsJson()) return printJson({ ...result, distinct: check });
+
+  console.log(`\n  ${bold(seed)}  ${dim(`${hexes.length} brands, one system`)}\n`);
+  for (const t of result.tenants) {
+    console.log(
+      `  ${swatch(t.brand, 4)} ${t.brand.padEnd(9)} ${t.audit.passed ? c(32, '✓') : c(31, '✗')} ${dim(`weakest ${t.audit.weakest.ratio}:1`)}`
+    );
+  }
+  console.log(`\n  ${check.passed ? c(32, '✓ no two brand colours collapse into each other') : c(33, `! ${check.clashes.length} pair(s) are close in hue`)}`);
+  for (const cl of check.clashes) console.log(`    ${cl.a} + ${cl.b}  ${dim(`${cl.degrees}° apart`)}`);
+
+  const out = flag('out', null);
+  if (out) {
+    for (const t of result.tenants) {
+      const dir = `${out}/${t.brand.replace('#', '')}`;
+      const e = exportAll(t.system);
+      for (const [f, body] of Object.entries(e.files)) {
+        const path = `${dir}/${f}`;
+        mkdirSync(path.split('/').slice(0, -1).join('/'), { recursive: true });
+        writeFileSync(path, body);
+      }
+    }
+    console.log(`\n  Wrote a full export per brand to ${bold(out)}  ${dim(`${result.tenants.length} tenants`)}\n`);
+    return;
+  }
+  console.log(`\n  ${dim(`notugly brands ${seed} ${hexes.join(' ')} --out ./tenants  writes a full export per brand`)}\n`);
+}
+
+// --- seed changelog ------------------------------------------------------------
+
+// The repo root this CLI itself is running from — not process.cwd(), which
+// could be anywhere the user happened to be standing when they ran the
+// command. This only means anything inside a git checkout of notugly.
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+const git = (args) => execFileSync('git', args, { cwd: REPO_ROOT, maxBuffer: 1024 * 1024 * 32, stdio: ['ignore', 'pipe', 'pipe'] });
+
+/** Reconstruct lib/ as it existed at a given git ref, in a scratch
+ * directory, and import system() from that copy — so two versions of the
+ * same file can be loaded side by side without either overwriting the other
+ * in Node's module cache. Uses only `git ls-tree`/`git show`, not `git
+ * archive` + tar, so it needs no extraction step beyond files this CLI can
+ * already write itself. */
+async function loadSystemAt(ref) {
+  const listing = git(['ls-tree', '-r', '--name-only', ref, '--', 'lib']).toString('utf8').trim();
+  if (!listing) throw new Error(`"${ref}" has no lib/ directory — is that a valid ref in this repo?`);
+
+  const scratch = mkdtempSync(join(tmpdir(), 'notugly-changelog-'));
+  for (const file of listing.split('\n')) {
+    const content = git(['show', `${ref}:${file}`]);
+    const dest = join(scratch, file);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, content);
+  }
+  return import(`file://${join(scratch, 'lib', 'system.mjs')}?t=${Date.now()}`);
+}
+
+async function cmdChangelog(args) {
+  const seed = args[0];
+  if (!seed) {
+    console.error('Which seed? Try: notugly changelog acme --against HEAD~5');
+    process.exit(2);
+  }
+  const against = flag('against', 'HEAD~1');
+  const vibe = flag('vibe', 'editorial');
+  const dark = has('dark');
+
+  let oldSystem;
+  try {
+    oldSystem = (await loadSystemAt(against)).system;
+  } catch (e) {
+    const reason = e.stderr ? e.stderr.toString('utf8').trim().split('\n')[0] : e.message;
+    console.error(`\n  Could not load notugly at "${against}": ${reason}`);
+    console.error(`  This compares a seed across two git refs of this repo — it needs a git checkout, not the published npm package.\n`);
+    process.exit(1);
+  }
+
+  const before = oldSystem(seed, { vibe, dark });
+  const after = system(seed, { vibe, dark });
+  const report = seedChangelog(before, after);
+
+  if (wantsJson()) return printJson({ seed, against, vibe, ...report });
+
+  console.log(`\n  ${bold(seed)}  ${dim(`${vibe} · ${against} → working tree`)}\n`);
+  if (!report.changed) {
+    console.log(`  ${c(32, '✓')} ${report.summary}\n`);
+    return;
+  }
+  for (const ch of report.changes.slice(0, 40)) {
+    console.log(`  ${c(33, '~')} ${ch.path.padEnd(24)} ${dim(String(ch.before))} → ${bold(String(ch.after))}`);
+  }
+  if (report.changes.length > 40) console.log(`  ${dim(`… and ${report.changes.length - 40} more`)}`);
+  console.log(`\n  ${report.summary}\n`);
 }
 
 // ---------------------------------------------------------------------------
@@ -816,10 +1242,10 @@ switch (cmd) {
     cmdPrint(argv.slice(1));
     break;
   case 'figma':
-    cmdTarget(argv.slice(1), 'Figma plugin', toFigma, 'Plugins → Development → Import plugin from manifest.');
+    await cmdTarget(argv.slice(1), 'Figma plugin', toFigma, 'Plugins → Development → Import plugin from manifest.');
     break;
   case 'vscode':
-    cmdTarget(argv.slice(1), 'VS Code theme', toVsCode, 'Drop it in ~/.vscode/extensions and restart.');
+    await cmdTarget(argv.slice(1), 'VS Code extension', toVsCodeExtension, "A publishable scaffold — set 'publisher' in package.json, then vsce package.", 'vscode');
     break;
   case 'spec':
     await cmdSpec(argv.slice(1));
@@ -864,6 +1290,45 @@ switch (cmd) {
     break;
   case 'team':
     cmdTeam(argv.slice(1));
+    break;
+  case 'brands':
+    cmdBrands(argv.slice(1));
+    break;
+  case 'changelog':
+    await cmdChangelog(argv.slice(1));
+    break;
+  case 'glass':
+    cmdGlass(argv.slice(1));
+    break;
+  case 'mascot':
+    cmdMascot(argv.slice(1));
+    break;
+  case 'gradient':
+    cmdGradient(argv.slice(1));
+    break;
+  case 'pattern':
+    cmdPattern(argv.slice(1));
+    break;
+  case 'shape':
+    cmdShape(argv.slice(1));
+    break;
+  case 'palette':
+    cmdPalette(argv.slice(1));
+    break;
+  case 'icon':
+    cmdIcon(argv.slice(1));
+    break;
+  case 'rtl':
+    cmdRtl(argv.slice(1));
+    break;
+  case 'a11y-statement':
+    cmdStatement(argv.slice(1));
+    break;
+  case 'benchmark':
+    cmdBenchmark();
+    break;
+  case 'mcp':
+    cmdMcp();
     break;
   case undefined:
     // No arguments: make something, so the first run shows the product.

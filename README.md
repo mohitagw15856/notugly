@@ -33,7 +33,7 @@ $ npx notugly audit
   Provably not ugly.
 ```
 
-2,000 random systems, 2,000 passes. The build regenerates that number every
+2,400 random systems, 2,400 passes. The build regenerates that number every
 time and **fails if it slips**, which is a very stressful way to write a README
 claim.
 
@@ -130,10 +130,19 @@ in someone else's preview crawler. It's one SVG that contains itself.
 | `notugly watch <url>` | What drifted — and whether it's a new colour or one 0.003 away from a token nobody could find. |
 | `notugly tokens f.json` | Audits *somebody else's* W3C or Figma tokens: `color.text.danger on surface.default is 2.99:1`. |
 | `notugly chaos` | The content that breaks design systems — 60-character German nouns, Arabic, a 404ing image, 200% zoom. |
+| `notugly palette photo.png` | The colours in a photograph — a real, from-scratch PNG decoder, no browser and no canvas involved. |
+| `notugly icon mo` | A favicon + app-icon package, real pixels: a PNG encoder written from nothing, all the way down to the ICO container. |
+| `notugly brands acme "#e4002b" "#0057ff"` | One product, several client brand colours — same type and radius, checked for two clients that picked near-identical reds. |
+| `notugly rtl` | Scans the CSS this project generates for `margin-left`s that won't survive a language switch. |
+| `notugly a11y-statement` | The document procurement asks for — a WCAG claim built from the same numbers `audit` prints, plus an honest list of what a colour tool can't check. |
+| `notugly benchmark` | A number next to "no runtime": what Tailwind's CDN, Bootstrap, MUI and a webfont actually cost. |
+| `notugly changelog acme --against HEAD~5` | Did a seed's design change across two versions of this repo — diffed field by field, not eyeballed. |
+| `notugly mcp` | The same checks, as an MCP server — `check_contrast`, `fix_contrast`, `name_colour` — with no SDK dependency. |
 
 Plus a **[GitHub Action](action.yml)** that fails a PR on a contrast
-regression, palettes from photographs, animated Slack stickers, and a decision
-log so there's an answer in six months to *"why does it look like this"*.
+regression, exports to iOS, Android, React Native, Flutter and email, animated
+Slack stickers, and a decision log so there's an answer in six months to
+*"why does it look like this"*.
 
 <details>
 <summary><b>There is also a small man who lives on the website</b></summary>
@@ -152,20 +161,38 @@ falls asleep. He is also, unavoidably, judging your contrast ratios.
 
 <br>
 
-## Five opinions
+## Six opinions
 
 <p align="center">
-  <img src="assets/readme/vibe-editorial.svg" width="19%" alt="Editorial">
-  <img src="assets/readme/vibe-brutalist.svg" width="19%" alt="Brutalist">
-  <img src="assets/readme/vibe-playful.svg" width="19%" alt="Playful">
-  <img src="assets/readme/vibe-glassy.svg" width="19%" alt="Glassy">
-  <img src="assets/readme/vibe-terminal.svg" width="19%" alt="Terminal">
+  <img src="assets/readme/vibe-editorial.svg" width="15%" alt="Editorial">
+  <img src="assets/readme/vibe-brutalist.svg" width="15%" alt="Brutalist">
+  <img src="assets/readme/vibe-playful.svg" width="15%" alt="Playful">
+  <img src="assets/readme/vibe-glassy.svg" width="15%" alt="Glassy">
+  <img src="assets/readme/vibe-terminal.svg" width="15%" alt="Terminal">
+  <img src="assets/readme/vibe-liquidglass.svg" width="15%" alt="Liquid Glass">
 </p>
 
 Radius, shadow, saturation, type and motion have to agree or it looks like four
 people built it — so they're decided together.
 **[On the website the whole page becomes the vibe you click.](https://mohitagw15856.github.io/notugly)**
 That's not a demo panel, that's the actual page.
+
+The newest one, **Liquid Glass**, models Apple's 2025 material — translucent,
+specular, concentric corners — as what it physically is: alpha blending over a
+background you don't control. So `notugly glass` doesn't just render it, it
+composites the text over a sweep of worst-case backgrounds (white, black,
+saturated system colours) and reports the *worst* contrast, not the one it was
+demoed over.
+
+```console
+$ npx notugly glass
+
+  regular  alpha 0.72 · blur 20px · saturate 1.6
+  ✓ Text stays above 4.5:1 against every background tested.
+
+  clear  alpha 0.42 · blur 34px · saturate 1.9
+  ✗ Fails against 1 of 7 plausible backgrounds — worst is 3.41:1 behind #000000.
+```
 
 <br>
 
@@ -189,11 +216,15 @@ every commit.
 ```console
 $ npx notugly export --out ./ui
 
-  notugly.css              2.7 kB      figma/manifest.json      162 B
-  tailwind.config.js       3.5 kB      figma/code.js            3.8 kB
-  tokens.json              4.9 kB      vscode/package.json      395 B
-  notugly.jsx               710 B      vscode/…theme.json       3.3 kB
-  Notugly.svelte            632 B      index.html               4.0 kB
+  notugly.css               3.8 kB      figma/manifest.json      172 B
+  tailwind.config.js        4.3 kB      figma/code.js            3.8 kB
+  tokens.json               6.2 kB      vscode/package.json      415 B
+  notugly.jsx                714 B      ios/NotuglyColors.swift  2.9 kB
+  Notugly.svelte             636 B      android/…/colors.xml     584 B
+  index.html                5.1 kB      flutter/notugly_theme…   1.3 kB
+
+  …and 18 more — Assets.xcassets, an email template, React Native, a Compose
+  theme, a full VS Code theme — 30 files in total.
 
   runtime cost  0 bytes
 ```
@@ -201,7 +232,8 @@ $ npx notugly export --out ./ui
 That last line is the point. It's all static text. No package, no provider, no
 `<ThemeProvider>` wrapping your app, nothing to `npm install` at 3am when it
 breaks. The Figma one is a **loadable plugin**, not a token file you then have
-to find an importer for.
+to find an importer for, and the iOS/Android exports carry both a light and a
+dark appearance — rebuilt from the same seed, not guessed.
 
 <br>
 
@@ -279,9 +311,12 @@ and a user's face never changes because a server restarted.
 
 The design skills in
 **[pm-claude-skills](https://github.com/mohitagw15856/pm-claude-skills)** call
-this for their contrast numbers, and its MCP server exposes `check_contrast`.
-That's the argument for the whole library in one line: **a skill can tell a
-model to check the contrast, but only arithmetic can actually check it.**
+this for their contrast numbers through its MCP server, and that same server
+now lives in this repo too — `notugly mcp`, or `node mcp/server.mjs` for any
+MCP client — exposing `check_contrast`, `fix_contrast` and `name_colour`
+without a separate service or an API key. That's the argument for the whole
+library in one line: **a skill can tell a model to check the contrast, but
+only arithmetic can actually check it.**
 
 <br>
 

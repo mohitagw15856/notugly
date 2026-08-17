@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="190" viewBox="0 0 320 190" role="img" aria-label="Liquid Glass vibe">
+      <rect width="320" height="190" rx="18" fill="#ffffff" stroke="#bcc2cc"/>
+      <text x="16" y="42" font-family="Avenir, serif" font-size="26" font-weight="bold" fill="#030305">Liquid Glass</text>
+      <rect x="16" y="60" width="120" height="34" rx="12" fill="#24439d"/>
+      <text x="76" y="82" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#ffffff">Button</text>
+      <text x="150" y="82" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#333741">muted text</text>
+      <rect x="16" y="120" width="30" height="30" rx="8" fill="#8cc5ff"/><rect x="52" y="120" width="30" height="30" rx="8" fill="#6eaafe"/><rect x="88" y="120" width="30" height="30" rx="8" fill="#558feb"/><rect x="124" y="120" width="30" height="30" rx="8" fill="#4075d4"/><rect x="160" y="120" width="30" height="30" rx="8" fill="#315bba"/><rect x="196" y="120" width="30" height="30" rx="8" fill="#24439d"/><rect x="232" y="120" width="30" height="30" rx="8" fill="#1a2c7d"/><rect x="268" y="120" width="30" height="30" rx="8" fill="#10185b"/>
+      <text x="16" y="175" font-family="ui-monospace, monospace" font-size="10" fill="#333741">8.88:1 weakest · WCAG AA</text>
+    </svg>
