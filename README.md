@@ -216,12 +216,12 @@ every commit.
 ```console
 $ npx notugly export --out ./ui
 
-  notugly.css               3.8 kB      figma/manifest.json      172 B
-  tailwind.config.js        4.3 kB      figma/code.js            3.8 kB
-  tokens.json               6.2 kB      vscode/package.json      415 B
-  notugly.jsx                714 B      ios/NotuglyColors.swift  2.9 kB
-  Notugly.svelte             636 B      android/…/colors.xml     584 B
-  index.html                5.1 kB      flutter/notugly_theme…   1.3 kB
+  notugly.css         3.8 kB      figma/manifest.json         172 B
+  tailwind.config.js  4.3 kB      figma/code.js               3.8 kB
+  tokens.json         6.2 kB      vscode/package.json         415 B
+  notugly.jsx          714 B      ios/NotuglyColors.swift     2.9 kB
+  Notugly.svelte       636 B      android/…/colors.xml        584 B
+  index.html          5.1 kB      flutter/notugly_theme.dart  1.3 kB
 
   …and 18 more — Assets.xcassets, an email template, React Native, a Compose
   theme, a full VS Code theme — 30 files in total.
