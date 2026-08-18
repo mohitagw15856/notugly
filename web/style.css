@@ -287,6 +287,7 @@ h3.sub { margin-top: 2.5rem; }
 .exportbox { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
 .exporthead { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); }
 .exporthead span { margin-right: auto; }
+.subfile { max-width: 55%; font-family: var(--font-mono); font-size: 0.76rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.2rem 0.4rem; cursor: pointer; }
 .report { margin-top: var(--gap); }
 .report table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.78rem; }
 .report td { padding: 0.35rem 0.4rem 0.35rem 0; border-bottom: 1px solid var(--border); }

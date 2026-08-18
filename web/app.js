@@ -370,19 +370,53 @@ function renderChaos(sys) {
 
 // --- export -----------------------------------------------------------------
 
+// One tab per *format*, not per file — the export grew from eight files to
+// thirty (iOS alone writes thirteen), and a flat pill row of thirty long,
+// near-identical paths like ios/Assets.xcassets/NotuglyBg.colorset/… wraps
+// into an unreadable mess. So the top row is the format (its folder, or the
+// filename when there is no folder) and a format that holds more than one
+// file gets a dropdown to pick between them.
+const groupOf = (file) => (file.includes('/') ? file.split('/')[0] : file);
+
 function renderExport(sys) {
   const e = exportAll(sys);
   const files = Object.keys(e.files);
+  const groups = [...new Set(files.map(groupOf))];
 
-  $('#export-tabs').innerHTML = files
-    .map((f) => `<button data-file="${f}" aria-selected="${f === state.exportFile}">${f}</button>`)
+  // Keep the selection valid across a reroll or a first render.
+  if (!files.includes(state.exportFile)) state.exportFile = files[0];
+  let group = groupOf(state.exportFile);
+  if (!groups.includes(group)) group = groups[0];
+  const groupFiles = files.filter((f) => groupOf(f) === group);
+  if (!groupFiles.includes(state.exportFile)) state.exportFile = groupFiles[0];
+
+  $('#export-tabs').innerHTML = groups
+    .map((g) => `<button data-group="${g}" aria-selected="${g === group}">${g}</button>`)
     .join('');
   $$('#export-tabs button').forEach((b) =>
     b.addEventListener('click', () => {
-      state.exportFile = b.dataset.file;
+      // Land on the first file of the format the tab represents.
+      state.exportFile = files.find((f) => groupOf(f) === b.dataset.group);
       renderExport(sys);
     })
   );
+
+  // The within-format picker: only shown when the format holds more than one
+  // file. Labelled by the path after the shared folder, so it stays short.
+  const sub = $('#export-subfile');
+  if (groupFiles.length > 1) {
+    sub.hidden = false;
+    sub.innerHTML = groupFiles
+      .map((f) => `<option value="${f}" ${f === state.exportFile ? 'selected' : ''}>${f.slice(group.length + 1)}</option>`)
+      .join('');
+    sub.onchange = () => {
+      state.exportFile = sub.value;
+      renderExport(sys);
+    };
+  } else {
+    sub.hidden = true;
+    sub.innerHTML = '';
+  }
 
   const current = e.files[state.exportFile] ?? e.files[files[0]];
   $('#export-code').textContent = current;
